@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Businesses</h1>
+        <a href="{% url 'create_business' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            Create New Business
+        </a>
+    </div>
+    
+    <div class="bg-white rounded shadow overflow-hidden">
+        <table class="w-full text-black">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="p-3 text-left">Business Name</th>
+                    <th class="p-3 text-left">Manager Account</th>
+                    <th class="p-3 text-left">Cashier Account</th>
+                    <th class="p-3 text-left">Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for business in businesses %}
+                <tr class="border-t hover:bg-gray-100">
+                    <td class="p-3">{{ business.name }}</td>
+                    <td class="p-3">manager@{{ business.name|slugify }}</td>
+                    <td class="p-3">cashier@{{ business.name|slugify }}</td>
+                    <td class="p-3">{{ business.created_at|date:"M d, Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="p-3 text-center">No businesses found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

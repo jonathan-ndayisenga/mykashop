@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="mb-6">
+    <h1 class="text-2xl font-bold">{{ business.name }} - Manager Dashboard</h1>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+    <div class="bg-blue-600 text-white p-4 rounded shadow">
+        <div>Today's Sales</div>
+        <div class="text-xl font-bold">UGX {{ today_sales|floatformat:0|intcomma }}</div>
+    </div>
+    <div class="bg-red-600 text-white p-4 rounded shadow">
+        <div>Low Stock Items</div>
+        <div class="text-xl font-bold">{{ low_stock_products|intcomma }}</div>
+    </div>
+    <div class="bg-green-600 text-white p-4 rounded shadow">
+        <div>Recent Transactions</div>
+        <div class="text-xl font-bold">{{ recent_sales|length|intcomma }}</div>
+    </div>
+</div>
+
+<div class="bg-white p-6 rounded shadow">
+    <h2 class="text-lg font-bold mb-4">Recent Sales</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-black">
+            <thead class="bg-gray-200">
+                <tr>
+                    <th class="p-2 text-left">Receipt #</th>
+                    <th class="p-2 text-left">Date</th>
+                    <th class="p-2 text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in recent_sales %}
+                <tr class="border-t hover:bg-gray-100">
+                    <td class="p-2">{{ sale.receipt_number }}</td>
+                    <td class="p-2">{{ sale.created_at|date:"M d, Y H:i" }}</td>
+                    <td class="p-2 text-right">UGX {{ sale.total_amount|floatformat:0|intcomma }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="p-2 text-center">No recent sales</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

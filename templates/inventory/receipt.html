@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold text-center mb-4">Sales Receipt</h1>
+    
+    <div class="mb-6">
+        <div class="flex justify-between mb-2">
+            <span class="font-semibold">Receipt #:</span>
+            <span>{{ sale.receipt_number }}</span>
+        </div>
+        <div class="flex justify-between mb-2">
+            <span class="font-semibold">Date:</span>
+            <span>{{ sale.created_at|date:"M d, Y H:i" }}</span>
+        </div>
+        <div class="flex justify-between">
+            <span class="font-semibold">Cashier:</span>
+            <span>{{ sale.created_by.get_full_name|default:sale.created_by.username }}</span>
+        </div>
+    </div>
+    
+    <div class="border-t border-b py-4 my-4">
+        <h2 class="font-bold mb-2">Items Purchased:</h2>
+        <ul>
+            {% for item in sale.items.all %}
+            <li class="flex justify-between py-1">
+                <span>{{ item.quantity }} x {{ item.product.name }}</span>
+                <span>UGX {{ item.total_price|floatformat:0|intcomma }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+    <div class="flex justify-between text-xl font-bold mb-6">
+        <span>Total:</span>
+        <span>UGX {{ sale.total_amount|floatformat:0|intcomma }}</span>
+    </div>
+    
+    <div class="text-center text-gray-500 text-sm mt-8">
+        Thank you for your business!
+    </div>
+    
+    <div class="mt-6 text-center">
+        <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            Print Receipt
+        </button>
+        <a href="{% url 'sale_list' %}" class="ml-2 bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+            Back to Sales
+        </a>
+    </div>
+</div>
+{% endblock %}

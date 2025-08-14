@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% load form_tags %}
+{% load humanize %}
+{% block content %}
+<div class="max-w-md mx-auto bg-white rounded shadow-md p-8 mt-12 text-center">
+  <h2 class="text-xl font-semibold text-gray-700 mb-4">You have been logged out.</h2>
+  <a href="{% url 'login' %}" class="text-blue-600 hover:underline">Log back in</a>
+</div>
+{% endblock %}
