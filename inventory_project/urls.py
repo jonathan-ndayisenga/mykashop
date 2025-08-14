@@ -1,22 +1,8 @@
+# inventory_project/urls.py
 from django.contrib import admin
 from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
-from django.views.generic import RedirectView
-from django.contrib.auth.decorators import login_required
+from accounts.views import login_view, logout_view, create_business, business_list  # Remove root_redirect
 from inventory.dashboard_views import manager_dashboard, cashier_dashboard
-from accounts.views import login_view, logout_view, create_business, business_list, root_redirect
-from inventory.dashboard_views import manager_dashboard, cashier_dashboard
-
-# Create a view that redirects to the appropriate dashboard
-@login_required
-def role_based_redirect(request):
-    if request.user.is_manager():
-        return RedirectView.as_view(url='/manager/')(request)
-    elif request.user.is_cashier():
-        return RedirectView.as_view(url='/cashier/')(request)
-    # Add a fallback for other user types
-    return RedirectView.as_view(url='/accounts/login/')(request)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -27,10 +13,12 @@ urlpatterns = [
     path('manager/', manager_dashboard, name='manager_dashboard'),
     path('cashier/', cashier_dashboard, name='cashier_dashboard'),
     path('inventory/', include('inventory.urls')),
-    path('', root_redirect),
+    path('', login_view, name='root'),  # Use login_view for root URL
 ]
 
-# Only serve static files in development
+# Static files
+from django.conf import settings
+from django.conf.urls.static import static
+
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -20,7 +20,7 @@ def create_business(request):
         form = BusinessCreationForm(request.POST)
         if form.is_valid():
             try:
-                # Generate slug-safe business name for usernames
+                # Generate slug-safe business name
                 base_name = re.sub(r'[^a-z0-9]+', '', form.cleaned_data['name'].lower().replace(' ', ''))
                 
                 with transaction.atomic():
@@ -39,7 +39,7 @@ def create_business(request):
                         username=manager_username,
                         password=form.cleaned_data['password'],
                         role='manager',
-                        business=business
+                        business=business  # Ensure business is set
                     )
                     
                     # Create cashier user
@@ -48,10 +48,10 @@ def create_business(request):
                         username=cashier_username,
                         password=form.cleaned_data['password'],
                         role='cashier',
-                        business=business
+                        business=business  # Ensure business is set
                     )
-                    
-                messages.success(request, f'Business "{business.name}" created with manager and cashier accounts.')
+                
+                messages.success(request, f'Business "{business.name}" created!')
                 return redirect('business_list')
                 
             except IntegrityError as e:
@@ -63,6 +63,7 @@ def create_business(request):
     
     return render(request, 'accounts/create_business.html', {'form': form})
 
+    
 @login_required
 @user_passes_test(is_superuser)
 def business_list(request):
@@ -70,6 +71,7 @@ def business_list(request):
     return render(request, 'accounts/business_list.html', {'businesses': businesses})
 
 def login_view(request):
+    # Redirect authenticated users to appropriate dashboard
     if request.user.is_authenticated:
         return redirect(get_redirect_url(request.user))
     
@@ -80,8 +82,9 @@ def login_view(request):
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
-            if user.is_superuser:
-                messages.error(request, 'Superusers must use the admin login')
+            # Check if user has a business
+            if not hasattr(user, 'business') or not user.business:
+                messages.error(request, 'Your account is not associated with a business')
                 return render(request, 'accounts/login.html')
                 
             auth_login(request, user)
@@ -92,21 +95,28 @@ def login_view(request):
     return render(request, 'accounts/login.html')
 
 def get_redirect_url(user):
-    if user.is_manager():
-        return 'manager_dashboard'
-    elif user.is_cashier():
-        return 'cashier_dashboard'
-    # Add a fallback for admin users
-    return 'admin:index'
+    """
+    Determine where to redirect a user after login.
+    - Superusers -> admin dashboard
+    - Managers -> manager_dashboard
+    - Cashiers -> cashier_dashboard
+    """
+    if user.is_superuser:
+        return '/admin/'  # Redirect superusers to admin panel
+    
+    try:
+        if user.is_manager():
+            return 'manager_dashboard'
+        elif user.is_cashier():
+            return 'cashier_dashboard'
+    except Exception:
+        pass
+    
+    # Fallback for users without roles
+    return 'login'
+
 
 def logout_view(request):
     logout(request)
     messages.success(request, "You have been logged out successfully.")
     return redirect('login')
-
-
-def root_redirect(request):
-    if request.user.is_authenticated:
-        return redirect(get_redirect_url(request.user))
-    else:
-        return redirect('login')    
