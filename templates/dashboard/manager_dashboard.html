@@ -37,12 +37,19 @@
 {% block content %}
 <div class="mb-6 flex justify-between items-center">
     <h1 class="text-2xl font-bold">{{ business.name }} - Manager Dashboard</h1>
-    <a href="{% url 'add_stock_page' %}" 
-       class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-       + Add Stock Item
-    </a>
-</div>
 
+    <!-- Button group -->
+    <div class="flex space-x-2">
+        <a href="{% url 'add_stock_page' %}" 
+           class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+           + Add Stock Item
+        </a>
+        <a href="{% url 'check_stock' %}" 
+           class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+           Check Your Stock
+        </a>
+    </div>
+</div>
 <!-- Sales Summary -->
 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
     <div class="bg-blue-600 text-white p-4 rounded shadow">

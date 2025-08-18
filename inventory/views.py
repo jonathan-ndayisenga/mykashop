@@ -323,6 +323,94 @@ def add_stock_page(request):
     })
 
 @login_required
+@manager_required
+def check_stock(request):
+    business = request.user.business
+    if not business:
+        return redirect('create_business')
+
+    query = request.GET.get("q", "")
+
+    # If searching → return filtered products only
+    if query:
+        products = Product.objects.filter(
+            business=business,
+            name__icontains=query
+        ).select_related("category")
+
+        product_list = []
+        for product in products:
+            total_sold = product.sale_items.aggregate(
+                total_qty=Sum('quantity'),
+                total_revenue=Sum(F('quantity') * F('unit_price'))
+            )
+            qty_sold = total_sold['total_qty'] or 0
+            revenue = total_sold['total_revenue'] or 0
+            profit = revenue - (qty_sold * product.buying_price)
+
+            product_list.append({
+                'id': product.id,
+                'name': product.name,
+                'unit': product.unit,
+                'buying_price': product.buying_price,
+                'selling_price': product.selling_price,
+                'stock_quantity': product.stock_quantity,
+                'low_stock_threshold': product.low_stock_threshold,
+                'last_restocked': product.last_restocked,
+                'total_sold': qty_sold,
+                'revenue': revenue,
+                'profit': profit,
+                'category': product.category.name,
+            })
+
+        return render(request, 'inventory/check_stock.html', {
+            'search_results': product_list,
+            'query': query,
+            'stock_data': []  # so template doesn’t break
+        })
+
+    # If no search → group by category
+    categories = Category.objects.filter(business=business).prefetch_related('products')
+    stock_data = []
+    for category in categories:
+        products = category.products.all()
+
+        product_list = []
+        for product in products:
+            total_sold = product.sale_items.aggregate(
+                total_qty=Sum('quantity'),
+                total_revenue=Sum(F('quantity') * F('unit_price'))
+            )
+            qty_sold = total_sold['total_qty'] or 0
+            revenue = total_sold['total_revenue'] or 0
+            profit = revenue - (qty_sold * product.buying_price)
+
+            product_list.append({
+                'id': product.id,
+                'name': product.name,
+                'unit': product.unit,
+                'buying_price': product.buying_price,
+                'selling_price': product.selling_price,
+                'stock_quantity': product.stock_quantity,
+                'low_stock_threshold': product.low_stock_threshold,
+                'last_restocked': product.last_restocked,
+                'total_sold': qty_sold,
+                'revenue': revenue,
+                'profit': profit,
+            })
+
+        stock_data.append({
+            'category': category,
+            'products': product_list
+        })
+
+    return render(request, 'inventory/check_stock.html', {
+        'stock_data': stock_data,
+        'query': query,
+    })
+
+
+@login_required
 def receipt(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
     return render(request, 'inventory/receipt.html', {'sale': sale})

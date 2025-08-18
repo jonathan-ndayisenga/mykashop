@@ -95,12 +95,15 @@ def manager_dashboard(request):
 def cashier_dashboard(request):
     """Dashboard for cashiers with sales performance"""
     business = request.user.business
+    if not business:
+        return redirect('business_settings')
+
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
-    year_ago = today - timedelta(days=365)  # Added yearly sales
-    
-    # Today's sales performance
+    year_ago = today - timedelta(days=365)
+
+    # Sales aggregates
     today_sales = Sale.objects.filter(
         business=business,
         created_by=request.user,
@@ -109,8 +112,7 @@ def cashier_dashboard(request):
         total_sales=Sum('total_amount'),
         total_transactions=Count('id')
     )
-    
-    # Weekly performance
+
     weekly_sales = Sale.objects.filter(
         business=business,
         created_by=request.user,
@@ -119,8 +121,7 @@ def cashier_dashboard(request):
         total_sales=Sum('total_amount'),
         total_transactions=Count('id')
     )
-    
-    # Monthly performance (added)
+
     monthly_sales = Sale.objects.filter(
         business=business,
         created_by=request.user,
@@ -129,8 +130,7 @@ def cashier_dashboard(request):
         total_sales=Sum('total_amount'),
         total_transactions=Count('id')
     )
-    
-    # Yearly performance (added)
+
     yearly_sales = Sale.objects.filter(
         business=business,
         created_by=request.user,
@@ -139,35 +139,32 @@ def cashier_dashboard(request):
         total_sales=Sum('total_amount'),
         total_transactions=Count('id')
     )
-    
+
     # Recent transactions
     recent_sales = Sale.objects.filter(
         business=business,
         created_by=request.user
     ).order_by('-created_at')[:5]
-    
-    # Fast moving products (for this cashier)
-    fast_moving = Product.objects.filter(
+
+    # Fast moving products (fix related name)
+    fast_moving_products = Product.objects.filter(
         business=business,
-        saleitem__sale__created_by=request.user
+        sale_items__sale__created_by=request.user
     ).annotate(
-        sold_count=Sum('saleitem__quantity')
+        sold_count=Sum('sale_items__quantity')
     ).order_by('-sold_count')[:5]
-    
+
     context = {
         'today_sales': today_sales['total_sales'] or 0,
         'today_transactions': today_sales['total_transactions'] or 0,
         'weekly_sales': weekly_sales['total_sales'] or 0,
         'weekly_transactions': weekly_sales['total_transactions'] or 0,
-        'monthly_sales': monthly_sales['total_sales'] or 0,  # Added
-        'monthly_transactions': monthly_sales['total_transactions'] or 0,  # Added
-        'yearly_sales': yearly_sales['total_sales'] or 0,  # Added
-        'yearly_transactions': yearly_sales['total_transactions'] or 0,  # Added
+        'monthly_sales': monthly_sales['total_sales'] or 0,
+        'monthly_transactions': monthly_sales['total_transactions'] or 0,
+        'yearly_sales': yearly_sales['total_sales'] or 0,
+        'yearly_transactions': yearly_sales['total_transactions'] or 0,
         'recent_sales': recent_sales,
-        'fast_moving_products': fast_moving,
+        'fast_moving_products': fast_moving_products,
     }
 
-
-    
-    
     return render(request, 'dashboard/cashier_dashboard.html', context)
