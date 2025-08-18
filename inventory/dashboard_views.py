@@ -19,13 +19,10 @@ def manager_dashboard(request):
     if not business:
         return redirect('create_business')
     
-    # Add categories to context
-    categories = Category.objects.filter(business=business)
-    
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
-    year_ago = today - timedelta(days=365)  # Added yearly sales
+    year_ago = today - timedelta(days=365)
     
     # Sales data
     today_sales = Sale.objects.filter(
@@ -43,7 +40,6 @@ def manager_dashboard(request):
         created_at__date__gte=month_ago
     ).aggregate(total=Sum('total_amount'))['total'] or 0
     
-    # Added yearly sales
     yearly_sales = Sale.objects.filter(
         business=business, 
         created_at__date__gte=year_ago
@@ -61,12 +57,12 @@ def manager_dashboard(request):
     # Recent sales
     recent_sales = Sale.objects.filter(business=business).order_by('-created_at')[:5]
     
-    # Top selling products
+    # Top selling products (fixed related name)
     top_products = Product.objects.filter(
         business=business,
-        saleitem__isnull=False
+        sale_items__isnull=False
     ).annotate(
-        total_sold=Sum('saleitem__quantity')
+        total_sold=Sum('sale_items__quantity')
     ).order_by('-total_sold')[:5]
     
     # Recent restocks
@@ -74,25 +70,25 @@ def manager_dashboard(request):
         product__business=business
     ).select_related('product', 'restocked_by').order_by('-restocked_at')[:5]
     
+    # Categories
+    categories = Category.objects.filter(business=business)
+    
     context = {
         'today_sales': today_sales,
         'weekly_sales': weekly_sales,
         'monthly_sales': monthly_sales,
-        'yearly_sales': yearly_sales,  # Added yearly sales
+        'yearly_sales': yearly_sales,
         'low_stock_products': low_stock_products,
         'total_products': total_products,
         'total_categories': total_categories,
         'recent_sales': recent_sales,
         'top_products': top_products,
         'recent_restocks': recent_restocks,
-    }
-
-    context = {
-        # ... existing context variables ...
-        'categories': categories,  # Add this line
+        'categories': categories,
     }
     
     return render(request, 'dashboard/manager_dashboard.html', context)
+
 
 @login_required
 @cashier_required

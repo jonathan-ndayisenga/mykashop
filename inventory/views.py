@@ -102,30 +102,69 @@ def receipt(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
     return render(request, 'inventory/receipt.html', {'sale': sale})
 
+
 @login_required
 @manager_required
 def manager_dashboard(request):
     business = request.user.business
     if not business:
-        return redirect('create_business')
-    
-    low_stock = Product.objects.filter(
-        business=business,
-        stock_quantity__lte=models.F('low_stock_threshold')
+        return redirect('business_settings')
+
+    now = timezone.now()
+    today = now.date()
+    week_ago = today - timedelta(days=7)
+    month_ago = today - timedelta(days=30)
+    year_ago = today - timedelta(days=365)
+
+    # --- Sales aggregates ---
+    today_sales = Sale.objects.filter(business=business, created_at__date=today).aggregate(
+        total_sales=Sum('total_amount'), count=Count('id')
     )
-    
-    today_sales = Sale.objects.filter(
-        business=business,
-        created_at__date=timezone.now().date()
-    ).aggregate(total=models.Sum('total_amount'))['total'] or 0
-    
+    weekly_sales = Sale.objects.filter(business=business, created_at__date__gte=week_ago).aggregate(
+        total_sales=Sum('total_amount'), count=Count('id')
+    )
+    monthly_sales = Sale.objects.filter(business=business, created_at__date__gte=month_ago).aggregate(
+        total_sales=Sum('total_amount'), count=Count('id')
+    )
+    yearly_sales = Sale.objects.filter(business=business, created_at__date__gte=year_ago).aggregate(
+        total_sales=Sum('total_amount'), count=Count('id')
+    )
+
+    # --- Products & Stock ---
+    total_products = Product.objects.filter(business=business).count()
+    low_stock_products = Product.objects.filter(business=business, stock_quantity__lte=models.F('low_stock_threshold')).count()
     total_categories = Category.objects.filter(business=business).count()
+
+    # --- Recent sales & top products ---
+    recent_sales = Sale.objects.filter(business=business).order_by('-created_at')[:10]
+    top_products = (
+        SaleItem.objects.filter(sale__business=business)
+        .values('product', 'product__name', 'product__category__name')
+        .annotate(total_sold=Sum('quantity'))
+        .order_by('-total_sold')[:10]
+    )
+
+    # --- Recent restocks ---
+    recent_restocks = Restock.objects.filter(product__business=business).order_by('-restocked_at')[:10]
+
     context = {
-        'low_stock_products': low_stock,
-        'today_sales': today_sales,
-        'total_products': Product.objects.filter(business=business).count(),
+        'business': business,
+        'today_sales': today_sales['total_sales'] or 0,
+        'today_transactions': today_sales['count'] or 0,
+        'weekly_sales': weekly_sales['total_sales'] or 0,
+        'weekly_transactions': weekly_sales['count'] or 0,
+        'monthly_sales': monthly_sales['total_sales'] or 0,
+        'monthly_transactions': monthly_sales['count'] or 0,
+        'yearly_sales': yearly_sales['total_sales'] or 0,
+        'yearly_transactions': yearly_sales['count'] or 0,
+        'total_products': total_products,
+        'low_stock_products': low_stock_products,
         'total_categories': total_categories,
+        'recent_sales': recent_sales,
+        'top_products': top_products,
+        'recent_restocks': recent_restocks,
     }
+
     return render(request, 'dashboards/manager.html', context)
 
 @login_required
