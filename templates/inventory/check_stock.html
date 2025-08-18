@@ -7,14 +7,14 @@
   <div class="mb-6">
     <a href="{% url 'manager_dashboard' %}" 
        class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition">
-      ⬅ Back to Dashboard
+        Back to Dashboard
     </a>
   </div>
 
   <!-- 🔍 Search Bar -->
   <form method="get" action="{% url 'check_stock' %}" class="mb-6 flex gap-2">
     <input type="text" name="q" value="{{ query }}" 
-           placeholder="🔎 Search item..." 
+           placeholder=" Search item..." 
            class="flex-grow border rounded px-4 py-2 shadow focus:outline-none focus:ring-2 focus:ring-blue-500">
     <button type="submit" 
             class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 transition">
@@ -24,10 +24,10 @@
 
   <!-- Combined Stock Block -->
   <div class="bg-white p-6 rounded shadow overflow-x-auto">
-    <h2 class="text-xl font-bold mb-4">📦 Stock Overview</h2>
+    <h2 class="text-xl font-bold mb-4">Stock Overview</h2>
 
     {% if query %}
-      <h3 class="text-lg font-semibold mb-2">🔍 Search Results for "{{ query }}"</h3>
+      <h3 class="text-lg font-semibold mb-2">Search Results for "{{ query }}"</h3>
       {% if search_results %}
         <table class="w-full text-black table-auto border-collapse">
           <thead class="bg-gray-200">
