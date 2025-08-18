@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 class Business(models.Model):
     name = models.CharField(max_length=255, unique=True)
     address = models.CharField(max_length=255, blank=True, null=True)
+    manager_email = models.EmailField()  # Added for low stock alerts
 
     def __str__(self):
         return self.name
@@ -41,7 +42,10 @@ class CustomUserManager(BaseUserManager):
 
         # Create default business if not passed
         if 'business' not in extra_fields:
-            default_business, _ = Business.objects.get_or_create(name="Admin Business")
+            default_business, _ = Business.objects.get_or_create(
+                name="Admin Business",
+                manager_email="admin@example.com"  # Default email
+            )
             extra_fields['business'] = default_business
 
         return self.create_user(username, password, **extra_fields)

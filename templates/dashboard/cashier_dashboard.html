@@ -6,21 +6,88 @@
     <h1 class="text-2xl font-bold">{{ business.name }} - Cashier Dashboard</h1>
 </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
     <div class="bg-blue-600 text-white p-4 rounded shadow">
         <div>Today's Sales</div>
         <div class="text-xl font-bold">UGX {{ today_sales|floatformat:0|intcomma }}</div>
+        <div class="text-sm mt-1">{{ today_transactions }} transactions</div>
     </div>
-    <div class="bg-green-600 text-white p-4 rounded shadow">
-        <div>Quick Actions</div>
-        <div class="mt-2">
-            <a href="{% url 'create_sale' %}" class="inline-block bg-white text-green-600 px-3 py-1 rounded font-medium">
-                New Sale
-            </a>
+    <div class="bg-purple-600 text-white p-4 rounded shadow">
+        <div>Weekly Sales</div>
+        <div class="text-xl font-bold">UGX {{ weekly_sales|floatformat:0|intcomma }}</div>
+        <div class="text-sm mt-1">{{ weekly_transactions }} transactions</div>
+    </div>
+    <div class="bg-teal-600 text-white p-4 rounded shadow">
+        <div>Monthly Sales</div>
+        <div class="text-xl font-bold">UGX {{ monthly_sales|floatformat:0|intcomma }}</div>
+        <div class="text-sm mt-1">{{ monthly_transactions }} transactions</div>
+    </div>
+    <div class="bg-indigo-600 text-white p-4 rounded shadow">
+        <div>Yearly Sales</div>
+        <div class="text-xl font-bold">UGX {{ yearly_sales|floatformat:0|intcomma }}</div>
+        <div class="text-sm mt-1">{{ yearly_transactions }} transactions</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+    <!-- Recent Transactions -->
+    <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-lg font-bold mb-4">Recent Transactions</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-black">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="p-2 text-left">Receipt #</th>
+                        <th class="p-2 text-left">Date</th>
+                        <th class="p-2 text-right">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sale in recent_sales %}
+                    <tr class="border-t hover:bg-gray-100">
+                        <td class="p-2">{{ sale.receipt_number }}</td>
+                        <td class="p-2">{{ sale.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="p-2 text-right">UGX {{ sale.total_amount|floatformat:0|intcomma }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="p-2 text-center">No recent transactions</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Fast Moving Products -->
+    <div class="bg-white p-6 rounded shadow">
+        <h2 class="text-lg font-bold mb-4">Fast Moving Products</h2>
+        <div class="overflow-x-auto">
+            <table class="w-full text-black">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="p-2 text-left">Product</th>
+                        <th class="p-2 text-right">Units Sold</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in fast_moving_products %}
+                    <tr class="border-t hover:bg-gray-100">
+                        <td class="p-2">{{ product.name }}</td>
+                        <td class="p-2 text-right">{{ product.sold_count|intcomma }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2" class="p-2 text-center">No sales data</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
+<!-- Quick Actions -->
 <div class="bg-white p-6 rounded shadow">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-bold">Start a New Sale</h2>

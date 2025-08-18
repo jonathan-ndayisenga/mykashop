@@ -4,17 +4,32 @@ from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
+from pydantic import ValidationError
 
-from accounts.models import User
+from accounts.models import User, Business  # Import Business model
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
     business = models.ForeignKey('accounts.Business', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['business', 'name'],
+                name='unique_category_per_business'
+            )
+        ]
+
     def __str__(self):
         return self.name
 
+    def delete(self, *args, **kwargs):
+    # Prevent deletion if category has products
+     if self.products.exists():  # use 'products', matching related_name
+        raise ValidationError("Cannot delete category with associated products. Move products first.")
+     super().delete(*args, **kwargs)
+        
 class Product(models.Model):
     UNIT_CHOICES = [
         ('pcs', 'Pieces'),
@@ -32,8 +47,13 @@ class Product(models.Model):
     buying_price = models.DecimalField(max_digits=10, decimal_places=2)
     selling_price = models.DecimalField(max_digits=10, decimal_places=2)
     business = models.ForeignKey('accounts.Business', on_delete=models.CASCADE)
-    low_stock_threshold = models.PositiveIntegerField(default=5)
+    low_stock_threshold = models.PositiveIntegerField(default=5)  # Threshold field
     last_restocked = models.DateTimeField(null=True, blank=True)
+    category = models.ForeignKey(
+        Category, 
+        on_delete=models.PROTECT,  # Prevent deletion if products exist
+        related_name='products'
+    )    
 
     def is_low_stock(self):
         return self.stock_quantity <= self.low_stock_threshold
@@ -50,19 +70,15 @@ def check_stock_level(sender, instance, **kwargs):
             f"Current Stock: {instance.stock_quantity} {instance.get_unit_display()}\n"
             f"Threshold: {instance.low_stock_threshold}"
         )
-        manager_emails = User.objects.filter(
-            business=instance.business, 
-            role='manager',
-            is_active=True
-        ).values_list('email', flat=True)
-        
-        send_mail(
-            subject,
-            message,
-            'inventory@system.com',
-            list(manager_emails),
-            fail_silently=True,
-        )
+        # Send to business's manager email
+        if instance.business.manager_email:
+            send_mail(
+                subject,
+                message,
+                'inventory@system.com',
+                [instance.business.manager_email],  # Use manager email
+                fail_silently=True,
+            )
 
 class Sale(models.Model):
     business = models.ForeignKey('accounts.Business', on_delete=models.CASCADE)

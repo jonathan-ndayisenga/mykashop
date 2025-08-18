@@ -6,7 +6,7 @@
 
 <!-- Date Filter Form -->
 <form method="get" class="mb-6 bg-white p-4 rounded shadow">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
             <label class="block text-gray-700 mb-2">Start Date</label>
             <input type="date" name="start_date" value="{{ start_date }}" class="w-full p-2 border rounded">
@@ -14,6 +14,16 @@
         <div>
             <label class="block text-gray-700 mb-2">End Date</label>
             <input type="date" name="end_date" value="{{ end_date }}" class="w-full p-2 border rounded">
+        </div>
+        <div>
+            <label class="block text-gray-700 mb-2">Time Range</label>
+            <select name="time_range" class="w-full p-2 border rounded">
+                <option value="">All Time</option>
+                <option value="today" {% if time_range == 'today' %}selected{% endif %}>Today</option>
+                <option value="week" {% if time_range == 'week' %}selected{% endif %}>This Week</option>
+                <option value="month" {% if time_range == 'month' %}selected{% endif %}>This Month</option>
+                <option value="year" {% if time_range == 'year' %}selected{% endif %}>This Year</option>
+            </select>
         </div>
         <div class="flex items-end">
             <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">

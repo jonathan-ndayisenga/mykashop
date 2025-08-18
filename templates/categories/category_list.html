@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="p-6 bg-white rounded shadow">
+    <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Categories</h2>
+        <a href="{% url 'add_category' %}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+            + Add Category
+        </a>
+    </div>
+    <table class="w-full border-collapse">
+        <thead>
+            <tr class="bg-gray-200">
+                <th class="p-2 text-left">Name</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for category in categories %}
+            <tr class="border-t hover:bg-gray-100">
+                <td class="p-2">{{ category.name }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td class="p-2 text-center">No categories yet</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

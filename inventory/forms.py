@@ -1,6 +1,7 @@
 from django import forms
 from .models import Product
 from .models import Sale
+from .models import Category
 
 class SaleForm(forms.Form):
     class Meta:
@@ -21,3 +22,22 @@ class SaleItemForm(forms.Form):
             self.fields['product'].queryset = Product.objects.filter(business=business)
         else:
             self.fields['product'].queryset = Product.objects.none()
+
+
+  # make sure your model is named Category
+
+class CategoryForm(forms.ModelForm):
+    class Meta:
+        model = Category
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(
+                attrs={
+                    'class': 'w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500',
+                    'placeholder': 'Enter category name'
+                }
+            )
+        }
+        labels = {
+            'name': 'Category Name'
+        }

@@ -9,13 +9,15 @@ class BusinessCreationForm(forms.Form):
         label="Default Password for Accounts",
         validators=[MinLengthValidator(4)]
     )
+    manager_email = forms.EmailField(  # Added manager email field
+        label="Manager Email for Alerts"
+    )
     address = forms.CharField(
         widget=forms.Textarea(attrs={'rows': 3}),
         required=False,
         label="Business Address"
     )
     phone_number = forms.CharField(required=False, label="Phone Number")
-    email = forms.EmailField(required=False, label="Contact Email")
     website = forms.URLField(required=False, label="Website")
     
     def clean_name(self):

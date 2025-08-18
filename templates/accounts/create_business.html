@@ -1,89 +1,84 @@
 {% extends 'base.html' %}
+{% load form_tags %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-    <h1 class="text-2xl font-bold text-center mb-6">Create New Business</h1>
+<div class="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow">
+    <h1 class="text-2xl font-bold mb-6">Create New Business</h1>
     
-    <form method="post">
+    <form method="post" novalidate>
         {% csrf_token %}
+        {{ form.non_field_errors }}
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-                <label class="block text-gray-700 mb-2">Business Name *</label>
-                {{ form.name }}
-                {% if form.name.errors %}
-                    <div class="text-red-500 text-sm mt-1">{{ form.name.errors.0 }}</div>
-                {% endif %}
+                <label for="{{ form.name.id_for_label }}" class="block text-gray-700 mb-1 font-semibold">
+                    {{ form.name.label }}
+                </label>
+                {{ form.name|add_class:"w-full px-3 py-2 border rounded" }}
+                {% for error in form.name.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ error }}</p>
+                {% endfor %}
             </div>
             
             <div>
-                <label class="block text-gray-700 mb-2">Default Password *</label>
-                {{ form.password }}
-                <p class="text-sm text-gray-500 mt-1">Minimum 4 characters</p>
+                <label for="{{ form.password.id_for_label }}" class="block text-gray-700 mb-1 font-semibold">
+                    {{ form.password.label }}
+                </label>
+                {{ form.password|add_class:"w-full px-3 py-2 border rounded" }}
+                {% for error in form.password.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ error }}</p>
+                {% endfor %}
             </div>
         </div>
         
         <div class="mb-6">
-            <label class="block text-gray-700 mb-2">Business Address</label>
-            {{ form.address }}
+            <label for="{{ form.manager_email.id_for_label }}" class="block text-gray-700 mb-1 font-semibold">
+                {{ form.manager_email.label }}
+            </label>
+            {{ form.manager_email|add_class:"w-full px-3 py-2 border rounded" }}
+            <p class="text-gray-500 text-sm mt-1">
+                This email will receive low stock alerts
+            </p>
+            {% for error in form.manager_email.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ error }}</p>
+            {% endfor %}
         </div>
         
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="mb-6">
+            <label for="{{ form.address.id_for_label }}" class="block text-gray-700 mb-1 font-semibold">
+                {{ form.address.label }}
+            </label>
+            {{ form.address|add_class:"w-full px-3 py-2 border rounded" }}
+            {% for error in form.address.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ error }}</p>
+            {% endfor %}
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-                <label class="block text-gray-700 mb-2">Phone Number</label>
-                {{ form.phone_number }}
+                <label for="{{ form.phone_number.id_for_label }}" class="block text-gray-700 mb-1 font-semibold">
+                    {{ form.phone_number.label }}
+                </label>
+                {{ form.phone_number|add_class:"w-full px-3 py-2 border rounded" }}
+                {% for error in form.phone_number.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ error }}</p>
+                {% endfor %}
             </div>
             
             <div>
-                <label class="block text-gray-700 mb-2">Email</label>
-                {{ form.email }}
-            </div>
-            
-            <div>
-                <label class="block text-gray-700 mb-2">Website</label>
-                {{ form.website }}
-            </div>
-        </div>
-        
-        <div class="bg-blue-50 p-4 rounded-lg mb-6">
-            <h3 class="font-bold text-blue-800 mb-2">Accounts that will be created:</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="p-3 bg-white rounded border border-blue-200">
-                    <h4 class="font-medium text-blue-700">Manager Account</h4>
-                    <p class="text-sm mt-1">Username: <span id="manager-username" class="font-mono">manager@[businessname]</span></p>
-                </div>
-                <div class="p-3 bg-white rounded border border-blue-200">
-                    <h4 class="font-medium text-blue-700">Cashier Account</h4>
-                    <p class="text-sm mt-1">Username: <span id="cashier-username" class="font-mono">cashier@[businessname]</span></p>
-                </div>
+                <label for="{{ form.website.id_for_label }}" class="block text-gray-700 mb-1 font-semibold">
+                    {{ form.website.label }}
+                </label>
+                {{ form.website|add_class:"w-full px-3 py-2 border rounded" }}
+                {% for error in form.website.errors %}
+                    <p class="text-red-600 text-sm mt-1">{{ error }}</p>
+                {% endfor %}
             </div>
         </div>
         
-        <button type="submit" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium">
+        <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
             Create Business
         </button>
     </form>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const nameInput = document.querySelector('input[name="name"]');
-    const managerSpan = document.getElementById('manager-username');
-    const cashierSpan = document.getElementById('cashier-username');
-    
-    function updateUsernames() {
-        const businessName = nameInput.value.trim().toLowerCase().replace(/\s+/g, '');
-        if (businessName) {
-            managerSpan.textContent = `manager@${businessName}`;
-            cashierSpan.textContent = `cashier@${businessName}`;
-        } else {
-            managerSpan.textContent = 'manager@[businessname]';
-            cashierSpan.textContent = 'cashier@[businessname]';
-        }
-    }
-    
-    nameInput.addEventListener('input', updateUsernames);
-    updateUsernames(); // Initialize
-});
-</script>
 {% endblock %}
