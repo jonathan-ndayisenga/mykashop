@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <h1 class="text-2xl font-bold">Stock Overview</h1>
+    <a href="{% url 'restock' %}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+        + Restock Items
+    </a>
+</div>
+
+<div class="bg-white rounded shadow overflow-x-auto">
+    <table class="w-full text-black">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="p-3 text-left">Product</th>
+                <th class="p-3 text-left">Category</th>
+                <th class="p-3 text-right">Initial Stock</th>
+                <th class="p-3 text-right">Current Stock</th>
+                <th class="p-3 text-right">Low Stock Threshold</th>
+                <th class="p-3 text-right">Status</th>
+                <th class="p-3 text-left">Last Restocked</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for product in products %}
+            <tr class="border-t hover:bg-gray-100">
+                <td class="p-3">{{ product.name }}</td>
+                <td class="p-3">{{ product.category.name }}</td>
+                <td class="p-3 text-right">{{ product.initial_stock|intcomma }}</td>
+                <td class="p-3 text-right">{{ product.current_stock|intcomma }}</td>
+                <td class="p-3 text-right">{{ product.low_stock_threshold|intcomma }}</td>
+                <td class="p-3 text-right">
+                    {% if product.current_stock <= product.low_stock_threshold %}
+                        <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">
+                            Low Stock
+                        </span>
+                    {% else %}
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">
+                            In Stock
+                        </span>
+                    {% endif %}
+                </td>
+                <td class="p-3">
+                    {% if product.last_restocked %}
+                        {{ product.last_restocked|date:"M d, Y" }}
+                    {% else %}
+                        Never
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="p-3 text-center">No products found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Restock History Button -->
+<div class="mt-6">
+    <a href="{% url 'restock_history' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        View Restock History
+    </a>
+    <a href="{% url 'manager_dashboard' %}" 
+           class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+            Back to Dashboard
+     </a>
+</div>
+{% endblock %}

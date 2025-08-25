@@ -8,7 +8,7 @@ from django.db import IntegrityError, transaction
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 from django.db.models import Sum, F, Count
-from fastapi import logger
+# Removed unused fastapi import
 from .models import Category
 from .decorators import manager_required  # 
 
@@ -65,7 +65,10 @@ def create_sale(request):
                 if quantity <= 0:
                     continue
                     
-                if product.stock_quantity < quantity:
+                # Check stock and update
+                try:
+                    product.update_stock(-quantity)  # Subtract sold quantity
+                except ValidationError:
                     sale.delete()
                     return JsonResponse({
                         'success': False,
@@ -80,9 +83,6 @@ def create_sale(request):
                 )
                 sale_item.save()
                 
-                product.stock_quantity -= quantity
-                product.save()
-                
                 total_amount += sale_item.total_price
             
             sale.total_amount = total_amount
@@ -95,13 +95,73 @@ def create_sale(request):
     
     products = Product.objects.filter(business=business)
     return render(request, 'inventory/create_sale.html', {'products': products})
-
 @login_required
 @cashier_required
 def receipt(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
     return render(request, 'inventory/receipt.html', {'sale': sale})
 
+@login_required
+@manager_required
+def stock_overview(request):
+    business = request.user.business
+    products = Product.objects.filter(business=business)
+    
+    context = {
+        'products': products
+    }
+    return render(request, 'inventory/stock_overview.html', context)
+
+@login_required
+@manager_required
+def restock_product(request):
+    business = request.user.business
+    
+    if request.method == 'POST':
+        product_id = request.POST.get('product')
+        quantity = int(request.POST.get('quantity'))
+        supplier = request.POST.get('supplier', '')
+        note = request.POST.get('note', '')
+        
+        product = get_object_or_404(Product, id=product_id, business=business)
+        
+        # Create the restock record
+        Restock.objects.create(
+            product=product,
+            quantity=quantity,
+            restocked_by=request.user,
+            supplier=supplier,
+            note=note
+        )
+        
+        messages.success(request, f'Restocked {quantity} units of {product.name}')
+        return redirect('restock')
+    
+    # Get products for the dropdown
+    products = Product.objects.filter(business=business)
+    
+    # Get recent restocks
+    recent_restocks = Restock.objects.filter(
+        product__business=business
+    ).select_related('product').order_by('-restocked_at')[:10]
+    
+    context = {
+        'products': products,
+        'recent_restocks': recent_restocks
+    }
+    
+    return render(request, 'inventory/restock.html', context)
+
+@login_required
+@manager_required
+def restock_history(request):
+    business = request.user.business
+    restocks = Restock.objects.filter(product__business=business).select_related('product', 'restocked_by').order_by('-restocked_at')
+    
+    context = {
+        'restocks': restocks
+    }
+    return render(request, 'inventory/restock_history.html', context)
 
 @login_required
 @manager_required
@@ -193,23 +253,46 @@ def cashier_dashboard(request):
 @manager_required
 def restock_product(request):
     business = request.user.business
+    
     if request.method == 'POST':
         product_id = request.POST.get('product')
         quantity = int(request.POST.get('quantity'))
+        supplier = request.POST.get('supplier', '')
         note = request.POST.get('note', '')
         
         product = get_object_or_404(Product, id=product_id, business=business)
         
+        # Update product stock
+        product.stock_quantity += quantity
+        product.last_restocked = timezone.now()
+        product.save()
+        
+        # Create the restock record
         Restock.objects.create(
             product=product,
             quantity=quantity,
             restocked_by=request.user,
+            supplier=supplier,
             note=note
         )
-        return redirect('manager_dashboard')
+        
+        messages.success(request, f'Restocked {quantity} units of {product.name}')
+        return redirect('restock')
     
+    # Get products for the dropdown
     products = Product.objects.filter(business=business)
-    return render(request, 'inventory/restock.html', {'products': products})
+    
+    # Get recent restocks
+    recent_restocks = Restock.objects.filter(
+        product__business=business
+    ).select_related('product').order_by('-restocked_at')[:10]
+    
+    context = {
+        'products': products,
+        'recent_restocks': recent_restocks
+    }
+    
+    return render(request, 'inventory/restock.html', context)
 
 @login_required
 def sale_list(request):
@@ -251,6 +334,44 @@ def sale_list(request):
     }
     return render(request, 'inventory/sale_list.html', context)
 
+@login_required
+def sales_history(request):
+    business = request.user.business
+    sales = Sale.objects.filter(business=business).order_by('-created_at')
+    
+    # Filtering
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    product_id = request.GET.get('product')
+    credit_only = request.GET.get('credit_only')
+    
+    if start_date:
+        sales = sales.filter(created_at__date__gte=start_date)
+    if end_date:
+        sales = sales.filter(created_at__date__lte=end_date)
+    if product_id:
+        sales = sales.filter(items__product_id=product_id)
+    if credit_only:
+        sales = sales.filter(is_credit=True, balance__gt=0)
+    
+    # Calculate totals
+    total_sales = sales.aggregate(total=Sum('total_amount'))['total'] or 0
+    total_credit = sales.filter(is_credit=True).aggregate(total=Sum('balance'))['total'] or 0
+    
+    # Get products for filter dropdown
+    products = Product.objects.filter(business=business)
+    
+    context = {
+        'sales': sales,
+        'total_sales': total_sales,
+        'total_credit': total_credit,
+        'products': products,
+        'start_date': start_date,
+        'end_date': end_date,
+        'product_id': product_id,
+        'credit_only': credit_only,
+    }
+    return render(request, 'inventory/sales_history.html', context)
 @login_required
 @manager_required
 def manage_categories(request):
@@ -340,7 +461,8 @@ def check_stock(request):
 
         product_list = []
         for product in products:
-            total_sold = product.sale_items.aggregate(
+            # Use the correct relationship name
+            total_sold = SaleItem.objects.filter(product=product).aggregate(
                 total_qty=Sum('quantity'),
                 total_revenue=Sum(F('quantity') * F('unit_price'))
             )
@@ -366,18 +488,21 @@ def check_stock(request):
         return render(request, 'inventory/check_stock.html', {
             'search_results': product_list,
             'query': query,
-            'stock_data': []  # so template doesn’t break
+            'stock_data': []  # so template doesn't break
         })
 
     # If no search → group by category
-    categories = Category.objects.filter(business=business).prefetch_related('products')
+    categories = Category.objects.filter(business=business)
     stock_data = []
+    
     for category in categories:
-        products = category.products.all()
-
+        # Get products for this category
+        products = Product.objects.filter(category=category, business=business)
+        
         product_list = []
         for product in products:
-            total_sold = product.sale_items.aggregate(
+            # Use the correct relationship name
+            total_sold = SaleItem.objects.filter(product=product).aggregate(
                 total_qty=Sum('quantity'),
                 total_revenue=Sum(F('quantity') * F('unit_price'))
             )
@@ -408,7 +533,6 @@ def check_stock(request):
         'stock_data': stock_data,
         'query': query,
     })
-
 
 @login_required
 def receipt(request, sale_id):

@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <h1 class="text-2xl font-bold">Restock History</h1>
+    <a href="{% url 'stock_overview' %}" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+        Back to Stock Overview
+    </a>
+    
+     <a href="{% url 'manager_dashboard' %}" 
+           class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+            Back to Dashboard
+     </a>
+    
+</div>
+
+<div class="bg-white rounded shadow overflow-x-auto">
+    <table class="w-full text-black">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="p-3 text-left">Date</th>
+                <th class="p-3 text-left">Product</th>
+                <th class="p-3 text-right">Quantity Added</th>
+                <th class="p-3 text-left">Restocked By</th>
+                <th class="p-3 text-left">Supplier</th>
+                <th class="p-3 text-left">Notes</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for restock in restocks %}
+            <tr class="border-t hover:bg-gray-100">
+                <td class="p-3">{{ restock.restocked_at|date:"M d, Y" }}</td>
+                <td class="p-3">{{ restock.product.name }}</td>
+                <td class="p-3 text-right">{{ restock.quantity|intcomma }}</td>
+                <td class="p-3">{{ restock.restocked_by.username }}</td>
+                <td class="p-3">{{ restock.supplier|default:"N/A" }}</td>
+                <td class="p-3">{{ restock.note|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="p-3 text-center">No restocks found</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

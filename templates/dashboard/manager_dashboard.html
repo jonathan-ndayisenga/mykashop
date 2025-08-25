@@ -99,6 +99,13 @@
             Product categories in your inventory
         </div>
     </div>
+        <a href="{% url 'stock_overview' %}">
+        <div class="bg-orange-600 text-white p-4 rounded shadow cursor-pointer hover:bg-orange-700 transition">
+            <div>Stock Overview</div>
+            <div class="text-xl font-bold">{{ total_products|intcomma }} Products</div>
+            <div class="text-sm mt-2">Click to view stock details</div>
+        </div>
+    </a>
 </div>
 
 <!-- Recent Sales Table -->

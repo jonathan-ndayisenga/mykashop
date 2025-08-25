@@ -17,7 +17,12 @@ urlpatterns = [
     path('', login_view, name='root'),
     path('manage-categories/', manage_categories, name='manage_categories'),
     path('add-stock/', add_stock_page, name='add_stock_page'),
-    path('check-stock/', check_stock, name='check_stock') # Use login_view for root URL
+    path('check-stock/', check_stock, name='check_stock'),
+    path('stock-overview/', views.stock_overview, name='stock_overview'),
+    path('restock-history/', views.restock_history, name='restock_history'),
+    path('sales-history/', views.sales_history, name='sales_history'),
+    path('restock/', views.restock_product, name='restock'),
+  # Use login_view for root URL
 ]
 
 # Static files
