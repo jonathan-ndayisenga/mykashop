@@ -7,12 +7,8 @@ from django.core.mail import send_mail
 from django.core.exceptions import ValidationError
 from django.db.models import Sum, F
 
-from accounts.models import User, Business  # Business model
+from accounts.models import Business
 
-
-# -------------------------
-# Category
-# -------------------------
 class Category(models.Model):
     name = models.CharField(max_length=100)
     business = models.ForeignKey(Business, on_delete=models.CASCADE)
@@ -30,15 +26,10 @@ class Category(models.Model):
         return self.name
 
     def delete(self, *args, **kwargs):
-        # Prevent deletion if category has products
-        if self.products.exists():  # products comes from Product.related_name
+        if self.product_set.exists():
             raise ValidationError("Cannot delete category with associated products. Move products first.")
         super().delete(*args, **kwargs)
 
-
-# -------------------------
-# Product
-# -------------------------
 class Product(models.Model):
     UNIT_CHOICES = [
         ('pcs', 'Pieces'),
@@ -50,11 +41,7 @@ class Product(models.Model):
     ]
 
     name = models.CharField(max_length=100)
-    category = models.ForeignKey(
-        Category,
-        on_delete=models.PROTECT,  # prevent deleting category if products exist
-        related_name='products'
-    )
+    category = models.ForeignKey(Category, on_delete=models.PROTECT)
     stock_quantity = models.PositiveIntegerField(default=0)
     unit = models.CharField(max_length=10, choices=UNIT_CHOICES, default='pcs')
     buying_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -63,49 +50,48 @@ class Product(models.Model):
     low_stock_threshold = models.PositiveIntegerField(default=5)
     last_restocked = models.DateTimeField(null=True, blank=True)
     initial_stock = models.PositiveIntegerField(default=0)
-    current_stock = models.PositiveIntegerField(default=0)
     
     def save(self, *args, **kwargs):
-        # Set initial stock only when first creating the product
         if not self.pk:
             self.initial_stock = self.stock_quantity
-            self.current_stock = self.stock_quantity
         super().save(*args, **kwargs)
     
-    def update_stock(self, quantity_change):
-        """Update current stock when items are sold or restocked"""
-        self.current_stock += quantity_change
-        if self.current_stock < 0:
-            raise ValidationError("Insufficient stock")
-        self.save()
-
     def is_low_stock(self):
         return self.stock_quantity <= self.low_stock_threshold
 
     def __str__(self):
         return self.name
-    def update_stock(self, quantity):
-        """Update stock quantity and ensure it doesn't go negative"""
-        self.stock_quantity += quantity
+        
+    def get_stock_value(self):
+        return self.stock_quantity * self.buying_price
+    
+    def get_profit_margin(self):
+        if self.buying_price == 0:
+            return 0
+        return ((self.selling_price - self.buying_price) / self.buying_price) * 100
+        
+    def log_stock_change(self, action, quantity_change, user, buying_price=None, selling_price=None, notes="", reference=""):
+        previous_stock = self.stock_quantity
+        self.stock_quantity += quantity_change
+        
         if self.stock_quantity < 0:
             raise ValidationError("Insufficient stock")
+        
         self.save()
-    
-    def get_total_sold(self):
-        """Calculate total quantity sold"""
-        return self.saleitem_set.aggregate(total=Sum('quantity'))['total'] or 0
-    
-    def get_total_revenue(self):
-        """Calculate total revenue from sales"""
-        return self.saleitem_set.aggregate(total=Sum(F('quantity') * F('unit_price')))['total'] or 0
-    
-    def get_profit(self):
-        """Calculate total profit from sales"""
-        revenue = self.get_total_revenue()
-        cost = self.get_total_sold() * self.buying_price
-        return revenue - cost
+        
+        StockLog.objects.create(
+            product=self,
+            action=action,
+            quantity_change=quantity_change,
+            previous_stock=previous_stock,
+            new_stock=self.stock_quantity,
+            buying_price=buying_price if buying_price is not None else self.buying_price,
+            selling_price=selling_price if selling_price is not None else self.selling_price,
+            notes=notes,
+            created_by=user,
+            reference=reference
+        )
 
-# Send low stock email alerts
 @receiver(post_save, sender=Product)
 def check_stock_level(sender, instance, **kwargs):
     if instance.is_low_stock():
@@ -124,10 +110,6 @@ def check_stock_level(sender, instance, **kwargs):
                 fail_silently=True,
             )
 
-
-# -------------------------
-# Sale
-# -------------------------
 class Sale(models.Model):
     business = models.ForeignKey(Business, on_delete=models.CASCADE)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -141,19 +123,8 @@ class Sale(models.Model):
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     
     def save(self, *args, **kwargs):
-        # Calculate balance for credit sales
-        if self.is_credit:
-            self.balance = self.total_amount - self.amount_paid
-        else:
-            self.amount_paid = self.total_amount
-            self.balance = 0
-        
-        super().save(*args, **kwargs)
-    def save(self, *args, **kwargs):
         if not self.receipt_number:
-            if not self.pk:
-                super().save(*args, **kwargs)
-            current_date = self.created_at.date()
+            current_date = self.created_at.date() if self.created_at else timezone.now().date()
             last_sale = Sale.objects.filter(
                 business=self.business,
                 created_at__date=current_date
@@ -169,19 +140,21 @@ class Sale(models.Model):
                 new_num = 1
 
             self.receipt_number = f"REC-{current_date.strftime('%Y%m%d')}-{new_num:04d}"
+        
+        if self.is_credit:
+            self.balance = self.total_amount - self.amount_paid
+        else:
+            self.amount_paid = self.total_amount
+            self.balance = 0
 
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Sale #{self.receipt_number}"
 
-
-# -------------------------
-# SaleItem
-# -------------------------
 class SaleItem(models.Model):
     sale = models.ForeignKey(Sale, related_name='items', on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, related_name='sale_items', on_delete=models.PROTECT)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="sale_items")
     quantity = models.PositiveIntegerField()
     unit_price = models.DecimalField(max_digits=10, decimal_places=2)
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
@@ -190,21 +163,28 @@ class SaleItem(models.Model):
         self.total_price = self.quantity * self.unit_price
         super().save(*args, **kwargs)
 
-
-# -------------------------
-# Restock
-# -------------------------
-class Restock(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    quantity = models.PositiveIntegerField()
-    restocked_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    restocked_at = models.DateTimeField(auto_now_add=True)
-    note = models.TextField(blank=True)
-    supplier = models.CharField(max_length=100, blank=True, null=True)
+class StockLog(models.Model):
+    ACTION_CHOICES = (
+        ('restock', 'Restock'),
+        ('sale', 'Sale'),
+        ('adjustment', 'Adjustment'),
+        ('initial', 'Initial Stock'),
+    )
     
-    def save(self, *args, **kwargs):
-        # Update product stock
-        self.product.update_stock(self.quantity)
-        self.product.last_restocked = timezone.now()
-        self.product.save()
-        super().save(*args, **kwargs)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    quantity_change = models.IntegerField()
+    previous_stock = models.IntegerField()
+    new_stock = models.IntegerField()
+    buying_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    selling_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reference = models.CharField(max_length=100, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.product.name} - {self.action} - {self.quantity_change}"

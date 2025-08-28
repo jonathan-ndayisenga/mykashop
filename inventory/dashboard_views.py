@@ -1,15 +1,14 @@
 from django.shortcuts import redirect, render
 from django.contrib.auth.decorators import login_required
-from django.db.models import Sum, Count, F, Q
+from django.db.models import Sum, F
 from django.utils import timezone
-from datetime import timedelta, datetime
-from django.core.exceptions import PermissionDenied
+from datetime import timedelta
 
 from inventory.views import cashier_required, manager_required
-from .models import Product, Category, Sale, SaleItem, Restock
-from accounts.models import User
+from .models import Product, Category, Sale, SaleItem, StockLog
+from django.db.models import Sum, Count, F, Q
 
-# Permission decorators (unchanged)
+
 
 @login_required
 @manager_required
@@ -18,62 +17,73 @@ def manager_dashboard(request):
     business = request.user.business
     if not business:
         return redirect('create_business')
-    
+
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
     month_ago = today - timedelta(days=30)
     year_ago = today - timedelta(days=365)
-    
-    # Sales data
+
+    # Sales metrics
     today_sales = Sale.objects.filter(
-        business=business, 
+        business=business,
         created_at__date=today
     ).aggregate(total=Sum('total_amount'))['total'] or 0
-    
+
     weekly_sales = Sale.objects.filter(
-        business=business, 
+        business=business,
         created_at__date__gte=week_ago
     ).aggregate(total=Sum('total_amount'))['total'] or 0
-    
+
     monthly_sales = Sale.objects.filter(
-        business=business, 
+        business=business,
         created_at__date__gte=month_ago
     ).aggregate(total=Sum('total_amount'))['total'] or 0
-    
+
     yearly_sales = Sale.objects.filter(
-        business=business, 
+        business=business,
         created_at__date__gte=year_ago
     ).aggregate(total=Sum('total_amount'))['total'] or 0
-    
+
     # Inventory metrics
     low_stock_products = Product.objects.filter(
         business=business,
         stock_quantity__lte=F('low_stock_threshold')
     ).count()
-    
+
     total_products = Product.objects.filter(business=business).count()
     total_categories = Category.objects.filter(business=business).count()
-    
+
     # Recent sales
     recent_sales = Sale.objects.filter(business=business).order_by('-created_at')[:5]
-    
-    # Top selling products (fixed related name)
+
+    # Top selling products
     top_products = Product.objects.filter(
         business=business,
         sale_items__isnull=False
     ).annotate(
         total_sold=Sum('sale_items__quantity')
     ).order_by('-total_sold')[:5]
-    
+
     # Recent restocks
-    recent_restocks = Restock.objects.filter(
-        product__business=business
-    ).select_related('product', 'restocked_by').order_by('-restocked_at')[:5]
-    
-    # Categories
+    recent_restocks = StockLog.objects.filter(
+        product__business=business,
+        action='restock'
+    ).select_related('product', 'created_by').order_by('-created_at')[:5]
+
+    # Pass data to match template variable names
+    recent_restocks_template = [
+        {
+            'product': r.product,
+            'restocked_by': r.created_by,
+            'quantity': r.quantity_change,
+            'restocked_at': r.created_at
+        } for r in recent_restocks
+    ]
+
     categories = Category.objects.filter(business=business)
-    
+
     context = {
+        'business': business,
         'today_sales': today_sales,
         'weekly_sales': weekly_sales,
         'monthly_sales': monthly_sales,
@@ -83,11 +93,16 @@ def manager_dashboard(request):
         'total_categories': total_categories,
         'recent_sales': recent_sales,
         'top_products': top_products,
-        'recent_restocks': recent_restocks,
+        'recent_restocks': recent_restocks_template,
         'categories': categories,
+        'today_transactions': Sale.objects.filter(business=business, created_at__date=today).count(),
+        'weekly_transactions': Sale.objects.filter(business=business, created_at__date__gte=week_ago).count(),
+        'monthly_transactions': Sale.objects.filter(business=business, created_at__date__gte=month_ago).count(),
+        'yearly_transactions': Sale.objects.filter(business=business, created_at__date__gte=year_ago).count(),
     }
-    
+
     return render(request, 'dashboard/manager_dashboard.html', context)
+
 
 
 @login_required
@@ -144,7 +159,7 @@ def cashier_dashboard(request):
     recent_sales = Sale.objects.filter(
         business=business,
         created_by=request.user
-    ).order_by('-created_at')[:5]
+    ).order_by('-created_at')[:3]
 
     # Fast moving products (fix related name)
     fast_moving_products = Product.objects.filter(

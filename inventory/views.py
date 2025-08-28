@@ -1,29 +1,20 @@
 from datetime import timedelta
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 from django.contrib import messages
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-from django.db import IntegrityError, transaction
+from django.db import transaction
+from django.db import IntegrityError
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
 from django.db.models import Sum, F, Count
-# Removed unused fastapi import
-from .models import Category
-from .decorators import manager_required  # 
-
-
-
-from accounts import models
-from .models import Sale, SaleItem, Product, Restock, Category
+from .models import Category, StockLog, Sale, SaleItem, Product
 from accounts.models import Business
-from .forms import SaleForm, SaleItemForm
-
 from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-# Decorators
 def manager_required(view_func):
     def wrapper(request, *args, **kwargs):
         if not request.user.is_manager():
@@ -65,9 +56,15 @@ def create_sale(request):
                 if quantity <= 0:
                     continue
                     
-                # Check stock and update
                 try:
-                    product.update_stock(-quantity)  # Subtract sold quantity
+                    product.log_stock_change(
+                        action='sale',
+                        quantity_change=-quantity,
+                        user=request.user,
+                        notes=f"Sold in sale #{sale.receipt_number}",
+                        reference=sale.receipt_number
+                    )
+                    
                 except ValidationError:
                     sale.delete()
                     return JsonResponse({
@@ -95,6 +92,55 @@ def create_sale(request):
     
     products = Product.objects.filter(business=business)
     return render(request, 'inventory/create_sale.html', {'products': products})
+
+@login_required
+@manager_required
+def stock_management(request):
+    business = request.user.business
+    categories = Category.objects.filter(business=business)
+    products = Product.objects.filter(business=business)
+    
+    category_filter = request.GET.get('category')
+    low_stock_only = request.GET.get('low_stock')
+    search_query = request.GET.get('q')
+    
+    if category_filter:
+        products = products.filter(category_id=category_filter)
+    
+    if low_stock_only:
+        products = products.filter(stock_quantity__lte=F('low_stock_threshold'))
+    
+    if search_query:
+        products = products.filter(name__icontains=search_query)
+    
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    
+    stock_logs = StockLog.objects.filter(product__business=business)
+    
+    if start_date:
+        stock_logs = stock_logs.filter(created_at__date__gte=start_date)
+    if end_date:
+        stock_logs = stock_logs.filter(created_at__date__lte=end_date)
+    
+    total_stock_value = sum(product.get_stock_value() for product in products)
+    total_low_stock = products.filter(stock_quantity__lte=F('low_stock_threshold')).count()
+    
+    context = {
+        'products': products,
+        'categories': categories,
+        'stock_logs': stock_logs[:50],
+        'total_stock_value': total_stock_value,
+        'total_low_stock': total_low_stock,
+        'category_filter': category_filter,
+        'low_stock_only': low_stock_only,
+        'search_query': search_query,
+        'start_date': start_date,
+        'end_date': end_date,
+    }
+    
+    return render(request, 'inventory/stock_management.html', context)
+
 @login_required
 @cashier_required
 def receipt(request, sale_id):
@@ -120,30 +166,43 @@ def restock_product(request):
     if request.method == 'POST':
         product_id = request.POST.get('product')
         quantity = int(request.POST.get('quantity'))
+        buying_price = request.POST.get('buying_price')
+        selling_price = request.POST.get('selling_price')
         supplier = request.POST.get('supplier', '')
         note = request.POST.get('note', '')
         
         product = get_object_or_404(Product, id=product_id, business=business)
         
-        # Create the restock record
-        Restock.objects.create(
-            product=product,
-            quantity=quantity,
-            restocked_by=request.user,
-            supplier=supplier,
-            note=note
-        )
-        
-        messages.success(request, f'Restocked {quantity} units of {product.name}')
-        return redirect('restock')
+        try:
+            if buying_price:
+                product.buying_price = Decimal(buying_price)
+            if selling_price:
+                product.selling_price = Decimal(selling_price)
+            
+            product.log_stock_change(
+                action='restock',
+                quantity_change=quantity,
+                user=request.user,
+                buying_price=product.buying_price,
+                selling_price=product.selling_price,
+                notes=f"Restocked from {supplier}. {note}",
+                reference=f"RESTOCK-{timezone.now().strftime('%Y%m%d-%H%M%S')}"
+            )
+            
+            messages.success(request, f'Restocked {quantity} units of {product.name}')
+            return redirect('restock')
+            
+        except ValidationError as e:
+            messages.error(request, str(e))
+        except Exception as e:
+            messages.error(request, f'Error during restock: {str(e)}')
     
-    # Get products for the dropdown
     products = Product.objects.filter(business=business)
     
-    # Get recent restocks
-    recent_restocks = Restock.objects.filter(
-        product__business=business
-    ).select_related('product').order_by('-restocked_at')[:10]
+    recent_restocks = StockLog.objects.filter(
+        product__business=business,
+        action='restock'
+    ).select_related('product', 'created_by').order_by('-created_at')[:10]
     
     context = {
         'products': products,
@@ -156,7 +215,10 @@ def restock_product(request):
 @manager_required
 def restock_history(request):
     business = request.user.business
-    restocks = Restock.objects.filter(product__business=business).select_related('product', 'restocked_by').order_by('-restocked_at')
+    restocks = StockLog.objects.filter(
+        product__business=business,
+        action='restock'
+    ).select_related('product', 'created_by').order_by('-created_at')
     
     context = {
         'restocks': restocks
@@ -176,7 +238,6 @@ def manager_dashboard(request):
     month_ago = today - timedelta(days=30)
     year_ago = today - timedelta(days=365)
 
-    # --- Sales aggregates ---
     today_sales = Sale.objects.filter(business=business, created_at__date=today).aggregate(
         total_sales=Sum('total_amount'), count=Count('id')
     )
@@ -190,12 +251,10 @@ def manager_dashboard(request):
         total_sales=Sum('total_amount'), count=Count('id')
     )
 
-    # --- Products & Stock ---
     total_products = Product.objects.filter(business=business).count()
-    low_stock_products = Product.objects.filter(business=business, stock_quantity__lte=models.F('low_stock_threshold')).count()
+    low_stock_products = Product.objects.filter(business=business, stock_quantity__lte=F('low_stock_threshold')).count()
     total_categories = Category.objects.filter(business=business).count()
 
-    # --- Recent sales & top products ---
     recent_sales = Sale.objects.filter(business=business).order_by('-created_at')[:10]
     top_products = (
         SaleItem.objects.filter(sale__business=business)
@@ -204,8 +263,10 @@ def manager_dashboard(request):
         .order_by('-total_sold')[:10]
     )
 
-    # --- Recent restocks ---
-    recent_restocks = Restock.objects.filter(product__business=business).order_by('-restocked_at')[:10]
+    recent_restocks = StockLog.objects.filter(
+        product__business=business,
+        action='restock'
+    ).order_by('-created_at')[:10]
 
     context = {
         'business': business,
@@ -239,8 +300,8 @@ def cashier_dashboard(request):
         created_by=request.user,
         created_at__date=timezone.now().date()
     ).aggregate(
-        total_sales=models.Sum('total_amount'),
-        count=models.Count('id')
+        total_sales=Sum('total_amount'),
+        count=Count('id')
     )
     
     context = {
@@ -250,56 +311,10 @@ def cashier_dashboard(request):
     return render(request, 'dashboards/cashier.html', context)
 
 @login_required
-@manager_required
-def restock_product(request):
-    business = request.user.business
-    
-    if request.method == 'POST':
-        product_id = request.POST.get('product')
-        quantity = int(request.POST.get('quantity'))
-        supplier = request.POST.get('supplier', '')
-        note = request.POST.get('note', '')
-        
-        product = get_object_or_404(Product, id=product_id, business=business)
-        
-        # Update product stock
-        product.stock_quantity += quantity
-        product.last_restocked = timezone.now()
-        product.save()
-        
-        # Create the restock record
-        Restock.objects.create(
-            product=product,
-            quantity=quantity,
-            restocked_by=request.user,
-            supplier=supplier,
-            note=note
-        )
-        
-        messages.success(request, f'Restocked {quantity} units of {product.name}')
-        return redirect('restock')
-    
-    # Get products for the dropdown
-    products = Product.objects.filter(business=business)
-    
-    # Get recent restocks
-    recent_restocks = Restock.objects.filter(
-        product__business=business
-    ).select_related('product').order_by('-restocked_at')[:10]
-    
-    context = {
-        'products': products,
-        'recent_restocks': recent_restocks
-    }
-    
-    return render(request, 'inventory/restock.html', context)
-
-@login_required
 def sale_list(request):
     business = request.user.business
     sales = Sale.objects.filter(business=business).order_by('-created_at')
     
-    # Time range filtering
     time_range = request.GET.get('time_range')
     today = timezone.now().date()
     
@@ -313,7 +328,6 @@ def sale_list(request):
     elif time_range == 'year':
         sales = sales.filter(created_at__year=today.year)
     
-    # Date range filtering
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     
@@ -322,7 +336,6 @@ def sale_list(request):
     if end_date:
         sales = sales.filter(created_at__date__lte=end_date)
     
-    # Calculate total sales
     total_sales = sales.aggregate(total=Sum('total_amount'))['total'] or 0
     
     context = {
@@ -337,13 +350,11 @@ def sale_list(request):
 @login_required
 def sales_history(request):
     business = request.user.business
-    sales = Sale.objects.filter(business=business).order_by('-created_at')
+    sales = Sale.objects.filter(business=business).prefetch_related('items__product').order_by('-created_at')
     
-    # Filtering
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
     product_id = request.GET.get('product')
-    credit_only = request.GET.get('credit_only')
     
     if start_date:
         sales = sales.filter(created_at__date__gte=start_date)
@@ -351,33 +362,29 @@ def sales_history(request):
         sales = sales.filter(created_at__date__lte=end_date)
     if product_id:
         sales = sales.filter(items__product_id=product_id)
-    if credit_only:
-        sales = sales.filter(is_credit=True, balance__gt=0)
     
-    # Calculate totals
     total_sales = sales.aggregate(total=Sum('total_amount'))['total'] or 0
-    total_credit = sales.filter(is_credit=True).aggregate(total=Sum('balance'))['total'] or 0
+    total_items = SaleItem.objects.filter(sale__in=sales).aggregate(total=Sum('quantity'))['total'] or 0
     
-    # Get products for filter dropdown
     products = Product.objects.filter(business=business)
     
     context = {
         'sales': sales,
         'total_sales': total_sales,
-        'total_credit': total_credit,
+        'total_items': total_items,
         'products': products,
         'start_date': start_date,
         'end_date': end_date,
         'product_id': product_id,
-        'credit_only': credit_only,
     }
+    
     return render(request, 'inventory/sales_history.html', context)
+
 @login_required
 @manager_required
 def manage_categories(request):
     business = request.user.business
 
-    # Handle category deletion via POST
     if request.method == 'POST' and 'delete_id' in request.POST:
         category_id = request.POST.get('delete_id')
         try:
@@ -389,7 +396,6 @@ def manage_categories(request):
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
 
-    # Handle category creation via POST
     elif request.method == 'POST' and 'name' in request.POST:
         name = request.POST.get('name')
         if name:
@@ -403,7 +409,6 @@ def manage_categories(request):
             except IntegrityError:
                 messages.error(request, f'A category with name "{name}" already exists!')
 
-    # GET request – show categories
     categories = Category.objects.filter(business=business).order_by('name')
     return render(request, 'inventory/manage_categories.html', {
         'categories': categories
@@ -417,7 +422,6 @@ def add_stock_page(request):
     
     if request.method == 'POST':
         try:
-            # Create new product
             product = Product.objects.create(
                 name=request.POST['name'],
                 category_id=request.POST['category'],
@@ -432,10 +436,6 @@ def add_stock_page(request):
             messages.success(request, f'Product "{product.name}" added successfully!')
             return redirect('manager_dashboard')
             
-        except KeyError as e:
-            messages.error(request, f'Missing required field: {e}')
-        except ValueError as e:
-            messages.error(request, f'Invalid value: {e}')
         except Exception as e:
             messages.error(request, f'Error adding product: {e}')
     
@@ -452,7 +452,6 @@ def check_stock(request):
 
     query = request.GET.get("q", "")
 
-    # If searching → return filtered products only
     if query:
         products = Product.objects.filter(
             business=business,
@@ -461,7 +460,6 @@ def check_stock(request):
 
         product_list = []
         for product in products:
-            # Use the correct relationship name
             total_sold = SaleItem.objects.filter(product=product).aggregate(
                 total_qty=Sum('quantity'),
                 total_revenue=Sum(F('quantity') * F('unit_price'))
@@ -488,20 +486,17 @@ def check_stock(request):
         return render(request, 'inventory/check_stock.html', {
             'search_results': product_list,
             'query': query,
-            'stock_data': []  # so template doesn't break
+            'stock_data': []
         })
 
-    # If no search → group by category
     categories = Category.objects.filter(business=business)
     stock_data = []
     
     for category in categories:
-        # Get products for this category
         products = Product.objects.filter(category=category, business=business)
         
         product_list = []
         for product in products:
-            # Use the correct relationship name
             total_sold = SaleItem.objects.filter(product=product).aggregate(
                 total_qty=Sum('quantity'),
                 total_revenue=Sum(F('quantity') * F('unit_price'))
@@ -535,6 +530,27 @@ def check_stock(request):
     })
 
 @login_required
-def receipt(request, sale_id):
-    sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
-    return render(request, 'inventory/receipt.html', {'sale': sale})
+@manager_required
+def stock_log(request):
+    business = request.user.business
+    stock_logs = StockLog.objects.filter(product__business=business).select_related('product', 'created_by').order_by('-created_at')
+    
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    action = request.GET.get('action')
+    
+    if start_date:
+        stock_logs = stock_logs.filter(created_at__date__gte=start_date)
+    if end_date:
+        stock_logs = stock_logs.filter(created_at__date__lte=end_date)
+    if action:
+        stock_logs = stock_logs.filter(action=action)
+    
+    context = {
+        'stock_logs': stock_logs,
+        'start_date': start_date,
+        'end_date': end_date,
+        'action': action,
+    }
+    
+    return render(request, 'inventory/stock_log.html', context)

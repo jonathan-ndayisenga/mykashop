@@ -22,6 +22,8 @@ urlpatterns = [
     path('restock-history/', views.restock_history, name='restock_history'),
     path('sales-history/', views.sales_history, name='sales_history'),
     path('restock/', views.restock_product, name='restock'),
+    path('stock-management/', views.stock_management, name='stock_management'),
+
   # Use login_view for root URL
 ]
 

@@ -73,6 +73,7 @@
 </div>
 
 <!-- Recent Restocks Section -->
+
 <div class="max-w-4xl mx-auto bg-white p-6 rounded shadow mt-6">
     <h2 class="text-xl font-bold mb-4">Recent Restocks</h2>
     
@@ -84,16 +85,18 @@
                     <th class="p-2 text-left">Date</th>
                     <th class="p-2 text-left">Product</th>
                     <th class="p-2 text-right">Quantity</th>
-                    <th class="p-2 text-left">Supplier</th>
+                    <th class="p-2 text-right">Buying Price</th>
+                    <th class="p-2 text-right">Selling Price</th>
                 </tr>
             </thead>
             <tbody>
-                {% for restock in recent_restocks %}
+                {% for log in recent_restocks %}
                 <tr class="border-t hover:bg-gray-100">
-                    <td class="p-2">{{ restock.restocked_at|date:"M d, Y" }}</td>
-                    <td class="p-2">{{ restock.product.name }}</td>
-                    <td class="p-2 text-right">{{ restock.quantity|intcomma }}</td>
-                    <td class="p-2">{{ restock.supplier|default:"N/A" }}</td>
+                    <td class="p-2">{{ log.created_at|date:"M d, Y" }}</td>
+                    <td class="p-2">{{ log.product.name }}</td>
+                    <td class="p-2 text-right">{{ log.quantity_change|intcomma }}</td>
+                    <td class="p-2 text-right">UGX {{ log.buying_price|floatformat:0|intcomma }}</td>
+                    <td class="p-2 text-right">UGX {{ log.selling_price|floatformat:0|intcomma }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -103,4 +106,22 @@
     <p class="text-gray-500">No recent restocks found.</p>
     {% endif %}
 </div>
+
+
+<!-- JavaScript to update prices when product selection changes  -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productSelect = document.querySelector('select[name="product"]');
+    const buyingPriceInput = document.getElementById('buying_price');
+    const sellingPriceInput = document.getElementById('selling_price');
+    
+    productSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption && selectedOption.value) {
+            buyingPriceInput.value = selectedOption.getAttribute('data-buying-price');
+            sellingPriceInput.value = selectedOption.getAttribute('data-selling-price');
+        }
+    });
+});
+</script>
 {% endblock %}

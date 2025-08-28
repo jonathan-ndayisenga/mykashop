@@ -48,6 +48,12 @@
            class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
            Check Your Stock
         </a>
+        <a href="{% url 'sales_history' %}" 
+           class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
+           View Sales History
+        </a>
+
+
     </div>
 </div>
 <!-- Sales Summary -->
@@ -112,27 +118,33 @@
 <div class="bg-white p-6 rounded shadow mb-6">
     <h2 class="text-lg font-bold mb-4">Recent Sales</h2>
     <div class="overflow-x-auto">
-        <table class="w-full text-black">
-            <thead class="bg-gray-200">
-                <tr>
-                    <th class="p-2 text-left">Receipt #</th>
-                    <th class="p-2 text-left">Cashier</th>
-                    <th class="p-2 text-left">Date</th>
-                    <th class="p-2 text-right">Amount</th>
+        <table class="w-full border-collapse table-auto">
+            <thead>
+                <tr class="bg-gray-200 text-left">
+                    <th class="p-2">Receipt #</th>
+                    <th class="p-2">Date</th>
+                    <th class="p-2">Product</th>
+                    <th class="p-2 text-right">Quantity</th>
+                    <th class="p-2 text-right">Unit Price</th>
+                    <th class="p-2 text-right">Total (Item)</th>
+                    <th class="p-2 text-right">Sale Total</th>
                 </tr>
             </thead>
             <tbody>
                 {% for sale in recent_sales %}
-                <tr class="border-t hover:bg-gray-100">
-                    <td class="p-2">{{ sale.receipt_number }}</td>
-                    <td class="p-2">{{ sale.created_by.username }}</td>
-                    <td class="p-2">{{ sale.created_at|date:"M d, Y H:i" }}</td>
-                    <td class="p-2 text-right">UGX {{ sale.total_amount|floatformat:0|intcomma }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" class="p-2 text-center">No recent sales</td>
-                </tr>
+                     
+                     {% for item in sale.items.all %}
+                    <tr class="border-t hover:bg-gray-100">
+                        <td class="p-2">{{ sale.receipt_number }}</td>
+                        <td class="p-2">{{ sale.created_at|date:"M d, Y H:i" }}</td>
+                        <td class="p-2">{{ item.product.name }}</td>
+                        <td class="p-2 text-right">{{ item.quantity }}</td>
+                        <td class="p-2 text-right">UGX {{ item.unit_price|floatformat:0|intcomma }}</td>
+                        <td class="p-2 text-right">UGX {{ item.total_price|floatformat:0|intcomma }}</td>
+                        <td class="p-2 text-right">UGX {{ sale.total_amount|floatformat:0|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+                    
                 {% endfor %}
             </tbody>
         </table>
