@@ -2,111 +2,224 @@
 {% load humanize %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold">Manage Categories</h1>
-        <a href="{% url 'manager_dashboard' %}" 
-           class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
-            Back to Dashboard
-        </a>
-    </div>
-    
-    {% if messages %}
-    <div class="mb-6">
-        {% for message in messages %}
-        <div class="p-4 rounded-lg 
-                    {% if message.tags == 'error' %}bg-red-100 text-red-700
-                    {% else %}bg-green-100 text-green-700{% endif %}">
+<div class="mx-auto max-w-4xl space-y-6">
+
+  <!-- Header -->
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Manage Categories</h1>
+    <a href="{% url 'manager_dashboard' %}"
+       class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+      Back to Dashboard
+    </a>
+  </div>
+
+  <!-- Messages -->
+  {% if messages %}
+    <div class="space-y-3">
+      {% for message in messages %}
+        {% if 'error' in message.tags %}
+          <div class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
             {{ message }}
-        </div>
-        {% endfor %}
+          </div>
+        {% else %}
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-200">
+            {{ message }}
+          </div>
+        {% endif %}
+      {% endfor %}
     </div>
-    {% endif %}
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Add Category Form -->
-        <div class="bg-gray-50 p-6 rounded shadow">
-            <h2 class="text-xl font-bold mb-4">Add New Category</h2>
-            <form method="post">
-                {% csrf_token %}
-                <div class="mb-4">
-                    <label class="block text-gray-700 mb-2">Category Name</label>
-                    <input type="text" name="name" required 
-                           class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                           placeholder="e.g., Beverages, Electronics">
-                </div>
-                <button type="submit" 
-                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Add Category
-                </button>
-            </form>
-        </div>
-        
-        <!-- Existing Categories -->
+  {% endif %}
+
+  <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+
+    <!-- Add Category -->
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-900">
+      <div class="mb-4">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Add New Category</h2>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Create groups to organize your products.</p>
+      </div>
+
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
         <div>
-            <h2 class="text-xl font-bold mb-4">Existing Categories</h2>
-            <div class="bg-gray-50 p-4 rounded shadow max-h-96 overflow-y-auto">
-                {% if categories %}
-                <ul class="divide-y">
-                    {% for category in categories %}
-                    <li class="py-3 flex justify-between items-center">
-                        <span class="font-medium">{{ category.name }}</span>
-                        <button class="delete-category text-red-600 hover:text-red-800"
-                                data-id="{{ category.id }}"
-                                data-name="{{ category.name }}">
-                            Delete
-                        </button>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <p class="text-gray-500">No categories found. Add your first category!</p>
-                {% endif %}
-            </div>
+          <label for="id_name" class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">
+            Category Name
+          </label>
+          <input id="id_name" name="name" type="text" required
+                 placeholder="e.g., Beverages, Electronics"
+                 class="block w-full rounded-xl border border-gray-300 bg-white/90 px-3 py-2.5 text-gray-900 placeholder-gray-400 shadow-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100" />
         </div>
+
+        <button type="submit"
+                class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm ring-1 ring-inset ring-blue-700/20 hover:bg-blue-700 active:scale-[0.99]">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+          Add Category
+        </button>
+      </form>
     </div>
+
+    <!-- Existing Categories -->
+    <div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-900">
+      <div class="mb-4 flex items-center justify-between">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Existing Categories</h2>
+        {% if categories %}
+          <span class="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+            {{ categories|length }} total
+          </span>
+        {% endif %}
+      </div>
+
+      <div class="max-h-96 overflow-y-auto rounded-xl border border-gray-100 dark:border-white/10">
+        {% if categories %}
+          <ul class="divide-y divide-gray-100 dark:divide-white/10">
+            {% for category in categories %}
+              <li class="flex items-center justify-between gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5">
+                <span class="font-medium text-gray-900 dark:text-gray-100">{{ category.name }}</span>
+                <div class="flex items-center gap-2">
+                  <a href="#"
+                     class="hidden rounded-lg border border-gray-200 px-2.5 py-1 text-xs hover:bg-gray-50 dark:border-white/10 dark:hover:bg-white/10">Edit</a>
+                  <button
+                    type="button"
+                    class="delete-category inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-rose-700"
+                    data-id="{{ category.id }}"
+                    data-name="{{ category.name }}"
+                  >
+                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7h6m1-2H8l1-2h6l1 2z"/>
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <div class="px-6 py-10 text-center">
+            <div class="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600/10">
+              <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-width="2" d="M4 7h16M4 12h8m-8 5h16"/>
+              </svg>
+            </div>
+            <p class="text-sm text-gray-500 dark:text-gray-400">No categories found. Add your first category!</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirm-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+  <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg dark:bg-gray-900">
+    <div class="mb-4 flex items-start gap-3">
+      <div class="mt-0.5 inline-flex h-8 w-8 items-center justify-center rounded-lg bg-rose-600/10">
+        <svg class="h-5 w-5 text-rose-600 dark:text-rose-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path stroke-linecap="round" stroke-width="2" d="M12 9v4m0 4h.01M4.93 4.93l14.14 14.14M19.07 4.93L4.93 19.07"/>
+        </svg>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Delete category?</h3>
+        <p id="confirm-text" class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          This will not delete products in this category.
+        </p>
+      </div>
+    </div>
+    <div class="mt-6 flex items-center justify-end gap-2">
+      <button id="cancel-delete"
+              class="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+        Cancel
+      </button>
+      <button id="confirm-delete"
+              class="rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700">
+        Delete
+      </button>
+    </div>
+  </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Delete category functionality
-    document.querySelectorAll('.delete-category').forEach(button => {
-        button.addEventListener('click', function() {
-            const categoryId = this.dataset.id;
-            const categoryName = this.dataset.name;
+  // --- CSRF helper (Django) ---
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+  }
+  const csrftoken = getCookie('csrftoken');
 
-            if (confirm(`Are you sure you want to delete "${categoryName}"? This will not delete products in this category.`)) {
-                // Send POST request with CSRF token
-                fetch('', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    body: `delete_id=${categoryId}`
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        // Remove the category item from the list
-                        this.closest('li').remove();
+  // --- Modal controls ---
+  const modal = document.getElementById('confirm-modal');
+  const confirmBtn = document.getElementById('confirm-delete');
+  const cancelBtn = document.getElementById('cancel-delete');
+  const confirmText = document.getElementById('confirm-text');
 
-                        // If no categories left, show message
-                        if (document.querySelectorAll('.delete-category').length === 0) {
-                            const container = document.querySelector('ul');
-                            container.innerHTML = '<p class="text-gray-500">No categories found. Add your first category!</p>';
-                        }
-                    } else {
-                        alert(data.error || 'Failed to delete category');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Network error. Please try again.');
-                });
-            }
-        });
+  let pending = { id: null, name: '' };
+
+  function openModal(id, name) {
+    pending = { id, name };
+    confirmText.textContent = `Are you sure you want to delete “${name}”? This will not delete products in this category.`;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    pending = { id: null, name: '' };
+  }
+
+  cancelBtn.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Bind delete buttons
+  document.querySelectorAll('.delete-category').forEach((btn) => {
+    btn.addEventListener('click', () => openModal(btn.dataset.id, btn.dataset.name));
+  });
+
+  // Confirm delete: POST via fetch to current URL
+  confirmBtn.addEventListener('click', () => {
+    if (!pending.id) return;
+
+    fetch('', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'X-CSRFToken': csrftoken,
+      },
+      body: `delete_id=${encodeURIComponent(pending.id)}`
+    })
+    .then((r) => r.json())
+    .then((data) => {
+      if (data.success) {
+        // Remove item row
+        const btn = document.querySelector(`.delete-category[data-id="${pending.id}"]`);
+        const li = btn?.closest('li');
+        li?.remove();
+
+        // If none left, show empty state
+        if (!document.querySelector('.delete-category')) {
+          const container = document.querySelector('.max-h-96 ul');
+          if (container) {
+            container.outerHTML = `
+              <div class="px-6 py-10 text-center">
+                <div class="mx-auto mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600/10">
+                  <svg class="h-6 w-6 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-width="2" d="M4 7h16M4 12h8m-8 5h16"/>
+                  </svg>
+                </div>
+                <p class="text-sm text-gray-500 dark:text-gray-400">No categories found. Add your first category!</p>
+              </div>`;
+          }
+        }
+        closeModal();
+      } else {
+        alert(data.error || 'Failed to delete category');
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      alert('Network error. Please try again.');
     });
-});
+  });
 </script>
 {% endblock %}

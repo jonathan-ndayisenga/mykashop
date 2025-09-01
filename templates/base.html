@@ -1,77 +1,142 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Inventory System</title>
+
+  <!-- Tailwind (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // Tailwind config: enable class-based dark mode
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Prevent initial flash: set theme before paint -->
+  <script>
+    (function() {
+      const stored = localStorage.getItem('theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (stored === 'dark' || (!stored && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
 </head>
-<body class="bg-gray-100">
-    <!-- Navigation Bar -->
-    <header class="bg-blue-600 text-white shadow-md">
-        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-            <div>
-                <h1 class="text-xl font-bold">
-                    {% if user.is_authenticated and user.business %}
-                        {{ user.business.name }} - Inventory
-                    {% else %}
-                        Inventory System
-                    {% endif %}
-                </h1>
-            </div>
-            
-            <div class="flex items-center space-x-4">
-                {% if user.is_authenticated %}
-                    <div class="hidden md:block">
-                        <span class="text-sm">Logged in as: 
-                            <span class="font-medium">{{ user.username }}</span>
-                        </span>
-                    </div>
-                    <form action="{% url 'logout' %}" method="post">
-                        {% csrf_token %}
-                        <button type="submit" 
-                                class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200">
-                            Logout
-                        </button>
-                    </form>
-                {% else %}
-                    <a href="{% url 'login' %}" 
-                       class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200">
-                        Login
-                    </a>
-                {% endif %}
-            </div>
-        </div>
-    </header>
 
-    <!-- Messages Display -->
-    {% if messages %}
-    <div class="container mx-auto px-4 mt-4">
-        {% for message in messages %}
-        <div class="p-4 rounded-lg shadow-md 
-                    {% if message.tags == 'error' %}bg-red-100 text-red-700
-                    {% else %}bg-blue-100 text-blue-700{% endif %}">
-            {{ message }}
-        </div>
-        {% endfor %}
+<body class="h-full bg-gray-100 text-gray-900 dark:bg-gray-950 dark:text-gray-100">
+  <!-- Navigation Bar -->
+  <header class="bg-blue-600 text-white shadow-md dark:bg-gray-900">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+      <div>
+        <h1 class="text-xl font-bold">
+          {% if user.is_authenticated and user.business %}
+            {{ user.business.name }} - Inventory
+          {% else %}
+            Inventory System
+          {% endif %}
+        </h1>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <!-- Theme toggle -->
+        <button id="theme-toggle"
+                class="rounded-lg bg-white/10 px-3 py-2 text-sm backdrop-blur hover:bg-white/20 transition dark:bg-white/5"
+                type="button" title="Toggle dark / light">
+          <span class="inline dark:hidden">🌙 Dark</span>
+          <span class="hidden dark:inline">☀️ Light</span>
+        </button>
+
+        {% if user.is_authenticated %}
+          <div class="hidden md:block">
+            <span class="text-sm text-white/90">Logged in as:
+              <span class="font-medium">{{ user.username }}</span>
+            </span>
+          </div>
+          <form action="{% url 'logout' %}" method="post">
+            {% csrf_token %}
+            <button type="submit"
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200">
+              Logout
+            </button>
+          </form>
+        {% else %}
+          <a href="{% url 'login' %}"
+             class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition duration-200">
+            Login
+          </a>
+        {% endif %}
+      </div>
     </div>
-    {% endif %}
+  </header>
 
-    <!-- Main Content -->
-    <main class="container mx-auto px-4 py-6">
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-gray-800 text-white py-4 mt-8">
-        <div class="container mx-auto px-4 text-center">
-            <p>Inventory System &copy; {% now "Y" %}</p>
+  <!-- Messages Display -->
+  {% if messages %}
+  <div class="container mx-auto px-4 mt-4 space-y-3">
+    {% for message in messages %}
+      {% if 'error' in message.tags %}
+        <div class="p-4 rounded-lg shadow-md border border-red-200 bg-red-50 text-red-700
+                    dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-200">
+          {{ message }}
         </div>
-    </footer>
-    <style>
-    #stock-modal {
-        transition: opacity 0.3s ease;
-    }
-</style>
+      {% elif 'success' in message.tags %}
+        <div class="p-4 rounded-lg shadow-md border border-green-200 bg-green-50 text-green-700
+                    dark:border-green-900/40 dark:bg-green-950/40 dark:text-green-200">
+          {{ message }}
+        </div>
+      {% elif 'warning' in message.tags %}
+        <div class="p-4 rounded-lg shadow-md border border-yellow-200 bg-yellow-50 text-yellow-800
+                    dark:border-yellow-900/40 dark:bg-yellow-950/40 dark:text-yellow-100">
+          {{ message }}
+        </div>
+      {% else %}
+        <div class="p-4 rounded-lg shadow-md border border-blue-200 bg-blue-50 text-blue-700
+                    dark:border-blue-900/40 dark:bg-blue-950/40 dark:text-blue-200">
+          {{ message }}
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Main Content -->
+  <main class="container mx-auto px-4 py-6">
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-800 text-white py-4 mt-8 dark:bg-gray-900 dark:border-t dark:border-white/10">
+    <div class="container mx-auto px-4 text-center text-sm text-white/90 dark:text-gray-300">
+      <p>Inventory System &copy; {% now "Y" %}</p>
+    </div>
+  </footer>
+
+  <style>
+    #stock-modal { transition: opacity 0.3s ease; }
+  </style>
+
+  <script>
+    // Toggle + persist theme
+    document.getElementById('theme-toggle')?.addEventListener('click', () => {
+      const html = document.documentElement;
+      const willBeDark = !html.classList.contains('dark');
+      html.classList.toggle('dark', willBeDark);
+      localStorage.setItem('theme', willBeDark ? 'dark' : 'light');
+    });
+  </script>
 </body>
 </html>

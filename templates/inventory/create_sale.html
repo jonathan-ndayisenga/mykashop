@@ -2,214 +2,267 @@
 {% load humanize %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white p-6 rounded shadow">
-    <h1 class="text-2xl font-bold mb-6">Create New Sale</h1>
-    
-    <div id="sale-form-container" class="mb-6">
-        <form id="sale-form" method="post">
-            {% csrf_token %}
-            <div class="mb-4">
-                <label class="block text-gray-700 mb-2">Search Products</label>
-                <input type="text" id="product-search" 
-                       class="w-full px-3 py-2 border rounded" 
-                       placeholder="Type product name...">
-            </div>
-            
-            <div class="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-gray-700 mb-2">Selected Products</label>
-                    <div id="selected-products" class="border rounded p-3 min-h-24">
-                        <!-- Selected products will appear here -->
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-gray-700 mb-2">Sale Summary</label>
-                    <div class="border rounded p-3">
-                        <div class="flex justify-between mb-2">
-                            <span>Subtotal:</span>
-                            <span id="subtotal">UGX 0</span>
-                        </div>
-                        <div class="border-t pt-2">
-                            <strong>Total:</strong>
-                            <strong id="total-amount" class="float-right">UGX 0</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="text-right">
-                <button type="submit" 
-                        class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700">
-                    Complete Sale
-                </button>
-            </div>
-        </form>
-    </div>
-    
-    <div class="bg-gray-100 p-4 rounded">
-        <h2 class="text-lg font-bold mb-3">Available Products</h2>
-        <div id="product-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {% for product in products %}
-            <div class="product-item bg-white border rounded p-3 cursor-pointer hover:bg-blue-50"
-                 data-id="{{ product.id }}"
-                 data-name="{{ product.name }}"
-                 data-price="{{ product.selling_price }}"
-                 data-stock="{{ product.stock_quantity }}">
-                <div class="font-bold">{{ product.name }}</div>
-                <div class="text-gray-600">{{ product.category.name }}</div>
-                <div class="flex justify-between mt-2">
-                    <span>UGX {{ product.selling_price|floatformat:0|intcomma }}</span>
-                    <span class="text-sm bg-gray-200 px-2 py-1 rounded">
-                        Stock: {{ product.stock_quantity }}
-                    </span>
-                </div>
-            </div>
-            {% endfor %}
+<div class="mx-auto max-w-5xl space-y-6">
+
+  <!-- Title -->
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Create New Sale</h1>
+    <a href="{% url 'cashier_dashboard' %}"
+       class="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700">
+      Back to Dashboard
+    </a>
+  </div>
+
+  <!-- Sale form -->
+  <div id="sale-form-container" class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-900">
+    <form id="sale-form" method="post" novalidate>
+      {% csrf_token %}
+
+      <!-- Search -->
+      <div class="mb-4">
+        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200" for="product-search">
+          Search Products
+        </label>
+        <div class="relative">
+          <input id="product-search" type="text" placeholder="Type product name…"
+                 class="w-full rounded-xl border border-gray-300 bg-white/90 px-4 py-2.5 pr-9 text-sm shadow-sm placeholder-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500" />
+          <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="7" stroke-width="2"></circle><path stroke-linecap="round" stroke-width="2" d="M21 21l-4.3-4.3"/>
+          </svg>
         </div>
-    </div>
+      </div>
+
+      <!-- Grid: Selected + Summary -->
+      <div class="mb-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <!-- Selected products (cart) -->
+        <div>
+          <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Selected Products</label>
+          <div id="selected-products" class="min-h-24 rounded-xl border border-gray-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-gray-800">
+            <div id="empty-cart" class="flex items-center justify-center gap-2 py-6 text-sm text-gray-500 dark:text-gray-400">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path stroke-linecap="round" stroke-width="2" d="M1 1h4l2.68 12.39A2 2 0 009.63 15H19a2 2 0 001.97-1.64L23 6H6"/></svg>
+              Your cart is empty. Click a product to add it.
+            </div>
+          </div>
+        </div>
+
+        <!-- Sale summary (sticky on desktop) -->
+        <div class="md:sticky md:top-20">
+          <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Sale Summary</label>
+          <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-800">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-600 dark:text-gray-300">Subtotal</span>
+              <span id="subtotal" class="font-medium text-gray-900 dark:text-gray-100">UGX 0</span>
+            </div>
+
+            <div class="my-3 border-t border-dashed border-gray-200 dark:border-white/10"></div>
+
+            <div class="flex items-center justify-between text-lg font-semibold">
+              <span class="text-gray-900 dark:text-gray-100">Total</span>
+              <span id="total-amount">UGX 0</span>
+            </div>
+
+            <div class="mt-4 flex items-center justify-end">
+              <button type="submit"
+                      class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm ring-1 ring-inset ring-blue-700/20 hover:bg-blue-700 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                      id="submit-btn" disabled>
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M7 3h10a2 2 0 012 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 012-2z"/></svg>
+                Complete Sale
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Available products -->
+      <div class="rounded-2xl bg-gray-50 p-4 dark:bg-gray-800/50">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Available Products</h2>
+          <span class="text-xs text-gray-500 dark:text-gray-400">Click a card to add</span>
+        </div>
+
+        <div id="product-list" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {% for product in products %}
+          <button type="button"
+                  class="product-item group w-full rounded-xl border border-gray-200 bg-white p-3 text-left shadow-sm transition hover:shadow-md dark:border-white/10 dark:bg-gray-900"
+                  data-id="{{ product.id }}"
+                  data-name="{{ product.name }}"
+                  data-price="{{ product.selling_price }}"
+                  data-stock="{{ product.stock_quantity }}">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="font-medium text-gray-900 dark:text-gray-100">{{ product.name }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ product.category.name }}</div>
+              </div>
+              {% if product.stock_quantity|default:0 <= 0 %}
+                <span class="rounded-md bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">Out</span>
+              {% elif product.stock_quantity|default:0 <= 5 %}
+                <span class="rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-200">Low</span>
+              {% endif %}
+            </div>
+            <div class="mt-2 flex items-center justify-between">
+              <span class="text-sm text-gray-700 dark:text-gray-300">UGX {{ product.selling_price|floatformat:0|intcomma }}</span>
+              <span class="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                Stock: {{ product.stock_quantity }}
+              </span>
+            </div>
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+    </form>
+  </div>
+
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const productItems = document.querySelectorAll('.product-item');
-    const selectedContainer = document.getElementById('selected-products');
-    const subtotalEl = document.getElementById('subtotal');
-    const totalEl = document.getElementById('total-amount');
-    const searchInput = document.getElementById('product-search');
-    
-    let selectedProducts = {};
-    let subtotal = 0;
-    
-    // Add product to sale
-    productItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const id = this.dataset.id;
-            const name = this.dataset.name;
-            const price = parseFloat(this.dataset.price);
-            const stock = parseInt(this.dataset.stock);
-            
-            if (!selectedProducts[id]) {
-                // Check stock
-                if (stock <= 0) {
-                    alert(`${name} is out of stock!`);
-                    return;
-                }
-                
-                selectedProducts[id] = {
-                    name: name,
-                    price: price,
-                    quantity: 1,
-                    stock: stock
-                };
-                
-                renderSelectedProducts();
-                updateTotals();
-            }
-        });
-    });
-    
-    // Search functionality
-    searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        productItems.forEach(item => {
-            const name = item.dataset.name.toLowerCase();
-            if (name.includes(searchTerm)) {
-                item.style.display = 'block';
-            } else {
-                item.style.display = 'none';
-            }
-        });
-    });
-    
-    // Render selected products
-    function renderSelectedProducts() {
-        selectedContainer.innerHTML = '';
-        
-        for (const id in selectedProducts) {
-            const product = selectedProducts[id];
-            const productEl = document.createElement('div');
-            productEl.className = 'flex justify-between items-center border-b pb-2 mb-2';
-            productEl.innerHTML = `
-                <div>
-                    <div class="font-medium">${product.name}</div>
-                    <div class="text-sm text-gray-600">UGX ${product.price.toFixed(0)} x 
-                        <input type="number" min="1" max="${product.stock}" 
-                               value="${product.quantity}" 
-                               class="quantity-input w-16 text-center border rounded"
-                               data-id="${id}">
-                    </div>
-                </div>
-                <div>
-                    <span class="font-medium">UGX ${(product.price * product.quantity).toFixed(0)}</span>
-                    <button class="remove-item ml-2 text-red-600 hover:text-red-800" data-id="${id}">
-                        &times;
-                    </button>
-                </div>
-            `;
-            selectedContainer.appendChild(productEl);
+document.addEventListener('DOMContentLoaded', () => {
+  const formatter = new Intl.NumberFormat('en-UG'); // UGX formatting (no decimals)
+  const productItems = document.querySelectorAll('.product-item');
+  const selectedContainer = document.getElementById('selected-products');
+  const emptyCart = document.getElementById('empty-cart');
+  const subtotalEl = document.getElementById('subtotal');
+  const totalEl = document.getElementById('total-amount');
+  const submitBtn = document.getElementById('submit-btn');
+  const searchInput = document.getElementById('product-search');
+
+  let selectedProducts = {}; // id -> { name, price, quantity, stock }
+
+  // Add product to cart
+  productItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const id = item.dataset.id;
+      const name = item.dataset.name;
+      const price = parseFloat(item.dataset.price || '0');
+      const stock = parseInt(item.dataset.stock || '0', 10);
+
+      if (stock <= 0) {
+        toast(`${name} is out of stock.`);
+        return;
+      }
+      if (!selectedProducts[id]) {
+        selectedProducts[id] = { name, price, quantity: 1, stock };
+      } else {
+        if (selectedProducts[id].quantity < stock) {
+          selectedProducts[id].quantity += 1;
+        } else {
+          toast(`Max stock reached for ${name}.`);
         }
-        
-        // Add event listeners to quantity inputs
-        document.querySelectorAll('.quantity-input').forEach(input => {
-            input.addEventListener('change', function() {
-                const id = this.dataset.id;
-                const quantity = parseInt(this.value);
-                
-                if (quantity > 0 && quantity <= selectedProducts[id].stock) {
-                    selectedProducts[id].quantity = quantity;
-                    updateTotals();
-                } else {
-                    this.value = selectedProducts[id].quantity;
-                    alert(`Quantity must be between 1 and ${selectedProducts[id].stock}`);
-                }
-            });
-        });
-        
-        // Add event listeners to remove buttons
-        document.querySelectorAll('.remove-item').forEach(button => {
-            button.addEventListener('click', function() {
-                const id = this.dataset.id;
-                delete selectedProducts[id];
-                renderSelectedProducts();
-                updateTotals();
-            });
-        });
-    }
-    
-    // Update totals
-    function updateTotals() {
-        subtotal = 0;
-        for (const id in selectedProducts) {
-            subtotal += selectedProducts[id].price * selectedProducts[id].quantity;
-        }
-        
-        subtotalEl.textContent = `UGX ${subtotal.toFixed(0)}`;
-        totalEl.textContent = `UGX ${subtotal.toFixed(0)}`;
-    }
-    
-    // Form submission
-    document.getElementById('sale-form').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Add hidden inputs for selected products
-        for (const id in selectedProducts) {
-            const inputId = document.createElement('input');
-            inputId.type = 'hidden';
-            inputId.name = 'product';
-            inputId.value = id;
-            this.appendChild(inputId);
-            
-            const inputQty = document.createElement('input');
-            inputQty.type = 'hidden';
-            inputQty.name = 'quantity';
-            inputQty.value = selectedProducts[id].quantity;
-            this.appendChild(inputQty);
-        }
-        
-        // Submit the form
-        this.submit();
+      }
+      renderCart();
+      updateTotals();
     });
+  });
+
+  // Search (light debounce)
+  let t;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(t);
+    t = setTimeout(() => {
+      const q = searchInput.value.trim().toLowerCase();
+      productItems.forEach(el => {
+        const name = (el.dataset.name || '').toLowerCase();
+        el.style.display = name.includes(q) ? '' : 'none';
+      });
+    }, 100);
+  });
+
+  // Render selected products list
+  function renderCart() {
+    selectedContainer.innerHTML = '';
+    const ids = Object.keys(selectedProducts);
+    emptyCart.style.display = ids.length ? 'none' : '';
+
+    ids.forEach(id => {
+      const p = selectedProducts[id];
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between gap-3 border-b border-gray-100 pb-2 last:border-none dark:border-white/10 mb-2 last:mb-0';
+      row.innerHTML = `
+        <div>
+          <div class="font-medium text-gray-900 dark:text-gray-100">${escapeHtml(p.name)}</div>
+          <div class="mt-0.5 text-sm text-gray-600 dark:text-gray-300">
+            UGX ${formatter.format(p.price)} ×
+            <input type="number" min="1" max="${p.stock}" value="${p.quantity}"
+                   class="quantity-input ml-1 w-16 rounded border border-gray-300 bg-white px-2 py-1 text-center text-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                   data-id="${id}" />
+            <span class="ml-1 text-xs text-gray-500 dark:text-gray-400">(max ${p.stock})</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="font-medium text-gray-900 dark:text-gray-100">UGX ${formatter.format(p.price * p.quantity)}</span>
+          <button class="remove-item rounded p-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30" data-id="${id}" aria-label="Remove ${escapeHtml(p.name)}">
+            &times;
+          </button>
+        </div>
+      `;
+      selectedContainer.appendChild(row);
+    });
+
+    // Quantity change handlers
+    selectedContainer.querySelectorAll('.quantity-input').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const id = inp.dataset.id;
+        const val = parseInt(inp.value || '1', 10);
+        const max = parseInt(inp.getAttribute('max') || '1', 10);
+        const min = parseInt(inp.getAttribute('min') || '1', 10);
+
+        if (Number.isNaN(val) || val < min || val > max) {
+          inp.value = selectedProducts[id].quantity;
+          toast(`Quantity must be between ${min} and ${max}.`);
+          return;
+        }
+        selectedProducts[id].quantity = val;
+        renderCart(); // re-render prices line
+        updateTotals();
+      });
+    });
+
+    // Remove item handlers
+    selectedContainer.querySelectorAll('.remove-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        delete selectedProducts[btn.dataset.id];
+        renderCart();
+        updateTotals();
+      });
+    });
+
+    submitBtn.disabled = ids.length === 0;
+  }
+
+  // Totals
+  function updateTotals() {
+    const subtotal = Object.values(selectedProducts).reduce((sum, p) => sum + (p.price * p.quantity), 0);
+    subtotalEl.textContent = `UGX ${formatter.format(Math.round(subtotal))}`;
+    totalEl.textContent = `UGX ${formatter.format(Math.round(subtotal))}`;
+  }
+
+  // Form submit: append hidden inputs then submit
+  document.getElementById('sale-form').addEventListener('submit', function (e) {
+    // Prevent double-append on resubmit
+    this.querySelectorAll('input[name="product"], input[name="quantity"]').forEach(n => n.remove());
+
+    Object.entries(selectedProducts).forEach(([id, p]) => {
+      const hidId = document.createElement('input');
+      hidId.type = 'hidden'; hidId.name = 'product'; hidId.value = id; this.appendChild(hidId);
+
+      const hidQty = document.createElement('input');
+      hidQty.type = 'hidden'; hidQty.name = 'quantity'; hidQty.value = p.quantity; this.appendChild(hidQty);
+    });
+  });
+
+  // Simple toast (no deps)
+  function toast(msg) {
+    const t = document.createElement('div');
+    t.className = 'fixed bottom-4 left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-gray-900 px-4 py-2 text-sm text-white shadow-lg dark:bg-black';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 1800);
+    setTimeout(() => t.remove(), 2200);
+  }
+
+  // Basic HTML escaper
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
 });
 </script>
 {% endblock %}

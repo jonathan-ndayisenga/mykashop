@@ -3,211 +3,243 @@
 
 {% block extra_head %}
 <style>
-    /* Ensure modal is properly positioned and clickable */
-    #stock-modal {
-        display: none;
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0,0,0,0.5);
-        z-index: 1000;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    #stock-modal-content {
-        background-color: white;
-        padding: 2rem;
-        border-radius: 0.5rem;
-        width: 90%;
-        max-width: 500px;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-    
-    #open-stock-modal {
-        position: relative;
-        z-index: 1;
-    }
+  /* Modal base (kept, but styled via Tailwind classes below) */
+  #stock-modal { display:none; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="mb-6 flex justify-between items-center">
-    <h1 class="text-2xl font-bold">{{ business.name }} - Manager Dashboard</h1>
+<!-- Page header -->
+<div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div>
+    <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+      {{ business.name }} — Manager Dashboard
+    </h1>
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">Overview of sales and inventory health</p>
+  </div>
 
-    <!-- Button group -->
-    <div class="flex space-x-2">
-        <a href="{% url 'add_stock_page' %}" 
-           class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
-           + Add Stock Item
-        </a>
-        <a href="{% url 'check_stock' %}" 
-           class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-           Check Your Stock
-        </a>
-        <a href="{% url 'sales_history' %}" 
-           class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
-           View Sales History
-        </a>
-
-
-    </div>
-</div>
-<!-- Sales Summary -->
-<div class="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-    <div class="bg-blue-600 text-white p-4 rounded shadow">
-        <div>Today's Sales</div>
-        <div class="text-xl font-bold">UGX {{ today_sales|floatformat:0|intcomma }}</div>
-        <div class="text-sm mt-1">{{ today_transactions }} transactions</div>
-    </div>
-    <div class="bg-purple-600 text-white p-4 rounded shadow">
-        <div>Weekly Sales</div>
-        <div class="text-xl font-bold">UGX {{ weekly_sales|floatformat:0|intcomma }}</div>
-        <div class="text-sm mt-1">{{ weekly_transactions }} transactions</div>
-    </div>
-    <div class="bg-teal-600 text-white p-4 rounded shadow">
-        <div>Monthly Sales</div>
-        <div class="text-xl font-bold">UGX {{ monthly_sales|floatformat:0|intcomma }}</div>
-        <div class="text-sm mt-1">{{ monthly_transactions }} transactions</div>
-    </div>
-    <div class="bg-indigo-600 text-white p-4 rounded shadow">
-        <div>Yearly Sales</div>
-        <div class="text-xl font-bold">UGX {{ yearly_sales|floatformat:0|intcomma }}</div>
-        <div class="text-sm mt-1">{{ yearly_transactions }} transactions</div>
-    </div>
-</div>
-
-<!-- Inventory Summary -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-    <div class="bg-red-600 text-white p-4 rounded shadow">
-        <div>Low Stock Items</div>
-        <div class="text-xl font-bold">{{ low_stock_products|intcomma }}</div>
-    </div>
-    <div class="bg-green-600 text-white p-4 rounded shadow">
-        <div>Total Products</div>
-        <div class="text-xl font-bold">{{ total_products|intcomma }}</div>
-    </div>
-    <div class="bg-orange-600 text-white p-4 rounded shadow">
-        <div class="flex justify-between items-start">
-            <div>
-                <div>Categories</div>
-                <div class="text-xl font-bold">{{ total_categories|intcomma }}</div>
-            </div>
-            <a href="{% url 'manage_categories' %}" 
-               class="bg-white text-orange-600 px-3 py-1 rounded text-sm hover:bg-gray-100 transition">
-                Manage
-            </a>
-        </div>
-        <div class="mt-3 text-sm opacity-80">
-            Product categories in your inventory
-        </div>
-    </div>
-        <a href="{% url 'stock_overview' %}">
-        <div class="bg-orange-600 text-white p-4 rounded shadow cursor-pointer hover:bg-orange-700 transition">
-            <div>Stock Overview</div>
-            <div class="text-xl font-bold">{{ total_products|intcomma }} Products</div>
-            <div class="text-sm mt-2">Click to view stock details</div>
-        </div>
+  <!-- Actions -->
+  <div class="flex flex-wrap items-center gap-2">
+    <a href="{% url 'add_stock_page' %}"
+       class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-white shadow-sm ring-1 ring-inset ring-emerald-700/20 hover:bg-emerald-700 active:scale-[0.99]">
+      <!-- plus icon -->
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+      Add Stock Item
     </a>
+
+    <a href="{% url 'check_stock' %}"
+       class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-white shadow-sm ring-1 ring-inset ring-blue-700/20 hover:bg-blue-700 active:scale-[0.99]">
+      <!-- eye icon -->
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3" stroke-width="2"/></svg>
+      Check Stock
+    </a>
+
+    <a href="{% url 'sales_history' %}"
+       class="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-white shadow-sm ring-1 ring-inset ring-rose-700/20 hover:bg-rose-700 active:scale-[0.99]">
+      <!-- receipt icon -->
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M7 3h10a2 2 0 012 2v14l-3-2-3 2-3-2-3 2V5a2 2 0 012-2z"/><path stroke-linecap="round" stroke-width="2" d="M9 7h6M9 11h6M9 15h3"/></svg>
+      Sales History
+    </a>
+  </div>
 </div>
 
-<!-- Recent Sales Table -->
-<div class="bg-white p-6 rounded shadow mb-6">
-    <h2 class="text-lg font-bold mb-4">Recent Sales</h2>
-    <div class="overflow-x-auto">
-        <table class="w-full border-collapse table-auto">
-            <thead>
-                <tr class="bg-gray-200 text-left">
-                    <th class="p-2">Receipt #</th>
-                    <th class="p-2">Date</th>
-                    <th class="p-2">Product</th>
-                    <th class="p-2 text-right">Quantity</th>
-                    <th class="p-2 text-right">Unit Price</th>
-                    <th class="p-2 text-right">Total (Item)</th>
-                    <th class="p-2 text-right">Sale Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for sale in recent_sales %}
-                     
-                     {% for item in sale.items.all %}
-                    <tr class="border-t hover:bg-gray-100">
-                        <td class="p-2">{{ sale.receipt_number }}</td>
-                        <td class="p-2">{{ sale.created_at|date:"M d, Y H:i" }}</td>
-                        <td class="p-2">{{ item.product.name }}</td>
-                        <td class="p-2 text-right">{{ item.quantity }}</td>
-                        <td class="p-2 text-right">UGX {{ item.unit_price|floatformat:0|intcomma }}</td>
-                        <td class="p-2 text-right">UGX {{ item.total_price|floatformat:0|intcomma }}</td>
-                        <td class="p-2 text-right">UGX {{ sale.total_amount|floatformat:0|intcomma }}</td>
-                    </tr>
-                    {% endfor %}
-                    
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- KPI cards -->
+<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+  <div class="rounded-2xl bg-gradient-to-br from-blue-600 to-blue-700 p-4 text-white shadow ring-1 ring-inset ring-white/10">
+    <div class="flex items-start justify-between">
+      <p class="text-sm/6 opacity-90">Today’s Sales</p>
+      <span class="rounded-lg bg-white/15 px-2 py-0.5 text-xs">{{ today_transactions }} tx</span>
     </div>
+    <p class="mt-2 text-2xl font-semibold">UGX {{ today_sales|floatformat:0|intcomma }}</p>
+  </div>
+
+  <div class="rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 p-4 text-white shadow ring-1 ring-inset ring-white/10">
+    <div class="flex items-start justify-between">
+      <p class="text-sm/6 opacity-90">Weekly Sales</p>
+      <span class="rounded-lg bg-white/15 px-2 py-0.5 text-xs">{{ weekly_transactions }} tx</span>
+    </div>
+    <p class="mt-2 text-2xl font-semibold">UGX {{ weekly_sales|floatformat:0|intcomma }}</p>
+  </div>
+
+  <div class="rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-600 p-4 text-white shadow ring-1 ring-inset ring-white/10">
+    <div class="flex items-start justify-between">
+      <p class="text-sm/6 opacity-90">Monthly Sales</p>
+      <span class="rounded-lg bg-white/15 px-2 py-0.5 text-xs">{{ monthly_transactions }} tx</span>
+    </div>
+    <p class="mt-2 text-2xl font-semibold">UGX {{ monthly_sales|floatformat:0|intcomma }}</p>
+  </div>
+
+  <div class="rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-800 p-4 text-white shadow ring-1 ring-inset ring-white/10">
+    <div class="flex items-start justify-between">
+      <p class="text-sm/6 opacity-90">Yearly Sales</p>
+      <span class="rounded-lg bg-white/15 px-2 py-0.5 text-xs">{{ yearly_transactions }} tx</span>
+    </div>
+    <p class="mt-2 text-2xl font-semibold">UGX {{ yearly_sales|floatformat:0|intcomma }}</p>
+  </div>
+</div>
+
+<!-- Inventory summary -->
+<div class="grid grid-cols-1 gap-4 md:grid-cols-4 mb-6">
+  <div class="rounded-2xl border border-rose-200 bg-white p-4 shadow-sm hover:shadow-md dark:border-rose-900/30 dark:bg-gray-900">
+    <div class="flex items-center justify-between">
+      <p class="text-sm text-rose-700 dark:text-rose-300">Low Stock Items</p>
+      <span class="rounded-md bg-rose-50 px-2 py-0.5 text-xs text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">Alert</span>
+    </div>
+    <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ low_stock_products|intcomma }}</p>
+  </div>
+
+  <div class="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm hover:shadow-md dark:border-emerald-900/30 dark:bg-gray-900">
+    <p class="text-sm text-emerald-700 dark:text-emerald-300">Total Products</p>
+    <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ total_products|intcomma }}</p>
+  </div>
+
+  <div class="rounded-2xl border border-amber-200 bg-white p-4 shadow-sm hover:shadow-md dark:border-amber-900/30 dark:bg-gray-900">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-sm text-amber-700 dark:text-amber-300">Categories</p>
+        <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ total_categories|intcomma }}</p>
+      </div>
+      <a href="{% url 'manage_categories' %}"
+         class="rounded-lg bg-amber-600 px-3 py-1 text-sm font-medium text-white shadow-sm hover:bg-amber-700">Manage</a>
+    </div>
+    <p class="mt-3 text-sm text-gray-500 dark:text-gray-400">Product categories in your inventory</p>
+  </div>
+
+  <a href="{% url 'stock_overview' %}" class="group rounded-2xl border border-amber-200 bg-white p-4 shadow-sm hover:shadow-md dark:border-amber-900/30 dark:bg-gray-900">
+    <div class="flex items-start justify-between">
+      <div>
+        <p class="text-sm text-amber-700 dark:text-amber-300">Stock Overview</p>
+        <p class="mt-2 text-2xl font-semibold text-gray-900 dark:text-white">{{ total_products|intcomma }} Products</p>
+      </div>
+      <svg class="h-5 w-5 text-amber-500 transition group-hover:translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path stroke-linecap="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+      </svg>
+    </div>
+    <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Click to view stock details</p>
+  </a>
+</div>
+
+<!-- Recent Sales -->
+<div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-900 mb-6">
+  <div class="mb-4 flex items-center justify-between">
+    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Recent Sales</h2>
+    <a href="{% url 'sales_history' %}" class="text-sm text-blue-700 hover:underline dark:text-blue-400">View all</a>
+  </div>
+  <div class="overflow-hidden rounded-xl border border-gray-100 dark:border-white/10">
+    <div class="overflow-x-auto">
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-left text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
+          <tr>
+            <th class="px-3 py-2">Receipt #</th>
+            <th class="px-3 py-2">Date</th>
+            <th class="px-3 py-2">Product</th>
+            <th class="px-3 py-2 text-right">Qty</th>
+            <th class="px-3 py-2 text-right">Unit Price</th>
+            <th class="px-3 py-2 text-right">Total (Item)</th>
+            <th class="px-3 py-2 text-right">Sale Total</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-white/10">
+          {% for sale in recent_sales %}
+            {% for item in sale.items.all %}
+            <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
+              <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">{{ sale.receipt_number }}</td>
+              <td class="px-3 py-2 text-gray-600 dark:text-gray-300">{{ sale.created_at|date:"M d, Y H:i" }}</td>
+              <td class="px-3 py-2">{{ item.product.name }}</td>
+              <td class="px-3 py-2 text-right">{{ item.quantity }}</td>
+              <td class="px-3 py-2 text-right">UGX {{ item.unit_price|floatformat:0|intcomma }}</td>
+              <td class="px-3 py-2 text-right">UGX {{ item.total_price|floatformat:0|intcomma }}</td>
+              <td class="px-3 py-2 text-right font-medium">UGX {{ sale.total_amount|floatformat:0|intcomma }}</td>
+            </tr>
+            {% endfor %}
+          {% empty %}
+            <tr>
+              <td colspan="7" class="px-3 py-8 text-center text-gray-500 dark:text-gray-400">
+                No recent sales yet.
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- Top Selling Products -->
-<div class="bg-white p-6 rounded shadow mb-6">
-    <h2 class="text-lg font-bold mb-4">Top Selling Products</h2>
+<div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-900 mb-6">
+  <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Top Selling Products</h2>
+  <div class="overflow-hidden rounded-xl border border-gray-100 dark:border-white/10">
     <div class="overflow-x-auto">
-        <table class="w-full text-black">
-            <thead class="bg-gray-200">
-                <tr>
-                    <th class="p-2 text-left">Product</th>
-                    <th class="p-2 text-left">Category</th>
-                    <th class="p-2 text-right">Units Sold</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for product in top_products %}
-                <tr class="border-t hover:bg-gray-100">
-                    <td class="p-2">{{ product.name }}</td>
-                    <td class="p-2">{{ product.category.name }}</td>
-                    <td class="p-2 text-right">{{ product.total_sold|intcomma }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="3" class="p-2 text-center">No sales data</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-left text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
+          <tr>
+            <th class="px-3 py-2">Product</th>
+            <th class="px-3 py-2">Category</th>
+            <th class="px-3 py-2 text-right">Units Sold</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-white/10">
+          {% for product in top_products %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
+            <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">{{ product.name }}</td>
+            <td class="px-3 py-2">{{ product.category.name }}</td>
+            <td class="px-3 py-2 text-right">{{ product.total_sold|intcomma }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="3" class="px-3 py-8 text-center text-gray-500 dark:text-gray-400">No sales data</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 </div>
 
 <!-- Recent Restocks -->
-<div class="bg-white p-6 rounded shadow">
-    <h2 class="text-lg font-bold mb-4">Recent Restocks</h2>
+<div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-900">
+  <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Recent Restocks</h2>
+  <div class="overflow-hidden rounded-xl border border-gray-100 dark:border-white/10">
     <div class="overflow-x-auto">
-        <table class="w-full text-black">
-            <thead class="bg-gray-200">
-                <tr>
-                    <th class="p-2 text-left">Product</th>
-                    <th class="p-2 text-left">Restocked By</th>
-                    <th class="p-2 text-right">Quantity</th>
-                    <th class="p-2 text-left">Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for restock in recent_restocks %}
-                <tr class="border-t hover:bg-gray-100">
-                    <td class="p-2">{{ restock.product.name }}</td>
-                    <td class="p-2">{{ restock.restocked_by.username }}</td>
-                    <td class="p-2 text-right">{{ restock.quantity|intcomma }}</td>
-                    <td class="p-2">{{ restock.restocked_at|date:"M d, Y" }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4" class="p-2 text-center">No recent restocks</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+      <table class="min-w-full text-sm">
+        <thead class="bg-gray-50 text-left text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
+          <tr>
+            <th class="px-3 py-2">Product</th>
+            <th class="px-3 py-2">Restocked By</th>
+            <th class="px-3 py-2 text-right">Quantity</th>
+            <th class="px-3 py-2">Date</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100 dark:divide-white/10">
+          {% for restock in recent_restocks %}
+          <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
+            <td class="px-3 py-2 font-medium text-gray-900 dark:text-gray-100">{{ restock.product.name }}</td>
+            <td class="px-3 py-2">{{ restock.restocked_by.username }}</td>
+            <td class="px-3 py-2 text-right">{{ restock.quantity|intcomma }}</td>
+            <td class="px-3 py-2">{{ restock.restocked_at|date:"M d, Y" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4" class="px-3 py-8 text-center text-gray-500 dark:text-gray-400">No recent restocks</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
+</div>
+
+<!-- (Optional) Stock Modal structure (kept, styled) -->
+<div id="stock-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4">
+  <div id="stock-modal-content" class="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg dark:bg-gray-900">
+    <div class="mb-4 flex items-center justify-between">
+      <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Quick Stock Action</h3>
+      <button id="close-stock-modal" class="rounded-md p-1 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Close">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <!-- Insert your form/content here -->
+    <p class="text-sm text-gray-600 dark:text-gray-300">Modal body…</p>
+  </div>
 </div>
 {% endblock %}

@@ -1,126 +1,177 @@
 {% extends 'base.html' %}
+{% load humanize %}
 
 {% block content %}
-<div class="container mx-auto mt-6">
+<div class="mx-auto max-w-6xl mt-6 space-y-6">
 
   <!-- 🔙 Back to Dashboard -->
-  <div class="mb-6">
-    <a href="{% url 'manager_dashboard' %}" 
-       class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition">
-        Back to Dashboard
+  <div>
+    <a href="{% url 'manager_dashboard' %}"
+       class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-white shadow-sm ring-1 ring-inset ring-blue-700/20 hover:bg-blue-700 active:scale-[0.99]">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+      Back to Dashboard
     </a>
   </div>
 
-  <!-- 🔍 Search Bar -->
-  <form method="get" action="{% url 'check_stock' %}" class="mb-6 flex gap-2">
-    <input type="text" name="q" value="{{ query }}" 
-           placeholder=" Search item..." 
-           class="flex-grow border rounded px-4 py-2 shadow focus:outline-none focus:ring-2 focus:ring-blue-500">
-    <button type="submit" 
-            class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 transition">
-      Search
-    </button>
-  </form>
+  <!-- Header -->
+  <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Stock Overview</h1>
+      <p class="text-sm text-gray-500 dark:text-gray-400">Search, review, and monitor your inventory performance.</p>
+    </div>
+
+    <!-- 🔍 Search Bar -->
+    <form method="get" action="{% url 'check_stock' %}" class="w-full sm:w-auto">
+      <div class="flex items-center gap-2">
+        <div class="relative flex-1 sm:w-80">
+          <input
+            type="text" name="q" value="{{ query }}"
+            placeholder="Search item, category, unit…"
+            class="w-full rounded-xl border border-gray-300 bg-white/90 px-4 py-2.5 pr-9 text-sm shadow-sm placeholder-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
+          />
+          <svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="7" stroke-width="2"></circle><path stroke-linecap="round" stroke-width="2" d="M21 21l-4.3-4.3"/>
+          </svg>
+        </div>
+        <button type="submit"
+                class="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm ring-1 ring-inset ring-emerald-700/20 hover:bg-emerald-700">
+          Search
+        </button>
+      </div>
+    </form>
+  </div>
 
   <!-- Combined Stock Block -->
-  <div class="bg-white p-6 rounded shadow overflow-x-auto">
-    <h2 class="text-xl font-bold mb-4">Stock Overview</h2>
-
-    {% if query %}
-      <h3 class="text-lg font-semibold mb-2">Search Results for "{{ query }}"</h3>
-      {% if search_results %}
-        <table class="w-full text-black table-auto border-collapse">
-          <thead class="bg-gray-200">
-            <tr>
-              <th class="p-2 text-left">Category</th>
-              <th class="p-2 text-left">Name</th>
-              <th class="p-2 text-left">Unit</th>
-              <th class="p-2 text-right">Buying Price</th>
-              <th class="p-2 text-right">Selling Price</th>
-              <th class="p-2 text-right">Stock Qty</th>
-              <th class="p-2 text-right">Low Stock Threshold</th>
-              <th class="p-2 text-left">Last Restocked</th>
-              <th class="p-2 text-right">Total Sold</th>
-              <th class="p-2 text-right">Revenue</th>
-              <th class="p-2 text-right">Profit Margin</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for product in search_results %}
-            <tr class="border-t hover:bg-gray-100">
-              <td class="p-2">{{ product.category }}</td>
-              <td class="p-2">{{ product.name }}</td>
-              <td class="p-2">{{ product.unit }}</td>
-              <td class="p-2 text-right">{{ product.buying_price }}</td>
-              <td class="p-2 text-right">{{ product.selling_price }}</td>
-              <td class="p-2 text-right">{{ product.stock_quantity }}</td>
-              <td class="p-2 text-right">{{ product.low_stock_threshold }}</td>
-              <td class="p-2">{{ product.last_restocked }}</td>
-              <td class="p-2 text-right">{{ product.total_sold }}</td>
-              <td class="p-2 text-right">{{ product.revenue }}</td>
-              <td class="p-2 text-right">
-                {% if product.profit > 0 %}
-                  <span class="text-green-600 font-bold">+{{ product.profit }}</span>
-                {% elif product.profit < 0 %}
-                  <span class="text-red-600 font-bold">{{ product.profit }}</span>
-                {% else %}
-                  {{ product.profit }}
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+  <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-900">
+    <div class="border-b border-gray-100 px-6 py-4 dark:border-white/10">
+      {% if query %}
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Search Results for “{{ query }}”</h2>
       {% else %}
-        <p class="text-red-600">⚠️ No items found for "{{ query }}".</p>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">All Categories</h2>
       {% endif %}
+    </div>
 
-    {% else %}
-      {% for group in stock_data %}
-        <h3 class="text-lg font-semibold mt-4 mb-2">{{ group.category.name }}</h3>
-        <table class="w-full text-black table-auto border-collapse mb-4">
-          <thead class="bg-gray-100">
-            <tr>
-              <th class="p-2 text-left">Name</th>
-              <th class="p-2 text-left">Unit</th>
-              <th class="p-2 text-right">Buying Price</th>
-              <th class="p-2 text-right">Selling Price</th>
-              <th class="p-2 text-right">Stock Qty</th>
-              <th class="p-2 text-right">Low Stock Threshold</th>
-              <th class="p-2 text-left">Last Restocked</th>
-              <th class="p-2 text-right">Total Sold</th>
-              <th class="p-2 text-right">Revenue</th>
-              <th class="p-2 text-right">Profit Margin</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for product in group.products %}
-            <tr class="border-t hover:bg-gray-100">
-              <td class="p-2">{{ product.name }}</td>
-              <td class="p-2">{{ product.unit }}</td>
-              <td class="p-2 text-right">{{ product.buying_price }}</td>
-              <td class="p-2 text-right">{{ product.selling_price }}</td>
-              <td class="p-2 text-right">{{ product.stock_quantity }}</td>
-              <td class="p-2 text-right">{{ product.low_stock_threshold }}</td>
-              <td class="p-2">{{ product.last_restocked }}</td>
-              <td class="p-2 text-right">{{ product.total_sold }}</td>
-              <td class="p-2 text-right">{{ product.revenue }}</td>
-              <td class="p-2 text-right">
-                {% if product.profit > 0 %}
-                  <span class="text-green-600 font-bold">+{{ product.profit }}</span>
-                {% elif product.profit < 0 %}
-                  <span class="text-red-600 font-bold">{{ product.profit }}</span>
-                {% else %}
-                  {{ product.profit }}
-                {% endif %}
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      {% endfor %}
-    {% endif %}
+    <div class="p-0">
+      {% if query %}
+        {% if search_results %}
+          <div class="overflow-hidden rounded-b-2xl">
+            <div class="overflow-x-auto">
+              <table class="min-w-full text-sm">
+                <thead class="sticky top-0 z-10 bg-gray-50 text-left text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
+                  <tr>
+                    <th class="px-4 py-2">Category</th>
+                    <th class="px-4 py-2">Name</th>
+                    <th class="px-4 py-2">Unit</th>
+                    <th class="px-4 py-2 text-right">Buying Price</th>
+                    <th class="px-4 py-2 text-right">Selling Price</th>
+                    <th class="px-4 py-2 text-right">Stock Qty</th>
+                    <th class="px-4 py-2 text-right">Low Stock</th>
+                    <th class="px-4 py-2">Last Restocked</th>
+                    <th class="px-4 py-2 text-right">Total Sold</th>
+                    <th class="px-4 py-2 text-right">Revenue</th>
+                    <th class="px-4 py-2 text-right">Profit</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-white/10">
+                  {% for product in search_results %}
+                  <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
+                    <td class="px-4 py-2">{{ product.category }}</td>
+                    <td class="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">{{ product.name }}</td>
+                    <td class="px-4 py-2">{{ product.unit }}</td>
+                    <td class="px-4 py-2 text-right">UGX {{ product.buying_price|floatformat:0|intcomma }}</td>
+                    <td class="px-4 py-2 text-right">UGX {{ product.selling_price|floatformat:0|intcomma }}</td>
+                    <td class="px-4 py-2 text-right">
+                      {{ product.stock_quantity|intcomma }}
+                      {% if product.low_stock_threshold and product.stock_quantity|default:0 <= product.low_stock_threshold %}
+                        <span class="ml-2 rounded-md bg-rose-100 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">Low</span>
+                      {% endif %}
+                    </td>
+                    <td class="px-4 py-2 text-right">{{ product.low_stock_threshold|default:"—" }}</td>
+                    <td class="px-4 py-2">{{ product.last_restocked|default:"—" }}</td>
+                    <td class="px-4 py-2 text-right">{{ product.total_sold|intcomma }}</td>
+                    <td class="px-4 py-2 text-right">UGX {{ product.revenue|floatformat:0|intcomma }}</td>
+                    <td class="px-4 py-2 text-right">
+                      {% if product.profit > 0 %}
+                        <span class="rounded-md bg-emerald-50 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">+UGX {{ product.profit|floatformat:0|intcomma }}</span>
+                      {% elif product.profit < 0 %}
+                        <span class="rounded-md bg-rose-50 px-1.5 py-0.5 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">UGX {{ product.profit|floatformat:0|intcomma }}</span>
+                      {% else %}
+                        UGX {{ product.profit|floatformat:0|intcomma }}
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% else %}
+          <div class="px-6 py-10 text-center text-sm text-rose-600 dark:text-rose-300">
+            ⚠️ No items found for “{{ query }}”.
+          </div>
+        {% endif %}
+      {% else %}
+        <!-- Grouped by Category -->
+        <div class="space-y-6 p-6">
+          {% for group in stock_data %}
+            <section class="rounded-2xl border border-gray-100 dark:border-white/10">
+              <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-white/10">
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ group.category.name }}</h3>
+                <span class="text-xs text-gray-500 dark:text-gray-400">{{ group.products|length }} items</span>
+              </div>
 
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-gray-50 text-left text-gray-600 dark:bg-gray-800/60 dark:text-gray-300">
+                    <tr>
+                      <th class="px-4 py-2">Name</th>
+                      <th class="px-4 py-2">Unit</th>
+                      <th class="px-4 py-2 text-right">Buying Price</th>
+                      <th class="px-4 py-2 text-right">Selling Price</th>
+                      <th class="px-4 py-2 text-right">Stock Qty</th>
+                      <th class="px-4 py-2 text-right">Low Stock</th>
+                      <th class="px-4 py-2">Last Restocked</th>
+                      <th class="px-4 py-2 text-right">Total Sold</th>
+                      <th class="px-4 py-2 text-right">Revenue</th>
+                      <th class="px-4 py-2 text-right">Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-gray-100 dark:divide-white/10">
+                    {% for product in group.products %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-white/5">
+                      <td class="px-4 py-2 font-medium text-gray-900 dark:text-gray-100">{{ product.name }}</td>
+                      <td class="px-4 py-2">{{ product.unit }}</td>
+                      <td class="px-4 py-2 text-right">UGX {{ product.buying_price|floatformat:0|intcomma }}</td>
+                      <td class="px-4 py-2 text-right">UGX {{ product.selling_price|floatformat:0|intcomma }}</td>
+                      <td class="px-4 py-2 text-right">
+                        {{ product.stock_quantity|intcomma }}
+                        {% if product.low_stock_threshold and product.stock_quantity|default:0 <= product.low_stock_threshold %}
+                          <span class="ml-2 rounded-md bg-rose-100 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">Low</span>
+                        {% endif %}
+                      </td>
+                      <td class="px-4 py-2 text-right">{{ product.low_stock_threshold|default:"—" }}</td>
+                      <td class="px-4 py-2">{{ product.last_restocked|default:"—" }}</td>
+                      <td class="px-4 py-2 text-right">{{ product.total_sold|intcomma }}</td>
+                      <td class="px-4 py-2 text-right">UGX {{ product.revenue|floatformat:0|intcomma }}</td>
+                      <td class="px-4 py-2 text-right">
+                        {% if product.profit > 0 %}
+                          <span class="rounded-md bg-emerald-50 px-1.5 py-0.5 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-200">+UGX {{ product.profit|floatformat:0|intcomma }}</span>
+                        {% elif product.profit < 0 %}
+                          <span class="rounded-md bg-rose-50 px-1.5 py-0.5 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200">UGX {{ product.profit|floatformat:0|intcomma }}</span>
+                        {% else %}
+                          UGX {{ product.profit|floatformat:0|intcomma }}
+                        {% endif %}
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
   </div>
 
 </div>
