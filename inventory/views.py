@@ -211,6 +211,11 @@ def restock_product(request):
     
     return render(request, 'inventory/restock.html', context)
 
+@cashier_required
+def sale_receipt(request, sale_id):
+    sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
+    return render(request, 'sales/receipt.html', {'sale': sale})
+
 @login_required
 @manager_required
 def restock_history(request):
@@ -554,3 +559,18 @@ def stock_log(request):
     }
     
     return render(request, 'inventory/stock_log.html', context)
+
+@login_required
+@cashier_required
+def view_receipt(request, sale_id):
+    """
+    View a receipt. If 'auto_print=1' is in the query params, 
+    the page will auto-print and redirect to dashboard (after a sale).
+    Otherwise, it just displays the receipt (e.g., viewing history).
+    """
+    sale = get_object_or_404(Sale, id=sale_id, business=request.user.business)
+    auto_print = request.GET.get('auto_print') == '1'
+    return render(request, 'inventory/receipt.html', {
+        'sale': sale,
+        'auto_print': auto_print
+    })

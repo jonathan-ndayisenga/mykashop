@@ -42,12 +42,50 @@
     </div>
     
     <div class="mt-6 text-center">
-        <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+        <button id="print-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
             Print Receipt
         </button>
-        <a href="{% url 'sale_list' %}" class="ml-2 bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
-            Back to Sales
+        <a href="{% url 'cashier_dashboard' %}" class="ml-2 bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">
+            Back to Dashboard
         </a>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let printed = false;
+    const printBtn = document.getElementById('print-btn');
+
+    // Auto redirect after 5 seconds if not printed
+    const timeout = setTimeout(() => {
+        if (!printed) window.location.href = "{% url 'cashier_dashboard' %}";
+    }, 5000);
+
+    // Print button click
+    printBtn.addEventListener('click', function() {
+        if (printed) return; // prevent double print
+        printed = true;
+        window.print();
+        setTimeout(() => {
+            window.location.href = "{% url 'cashier_dashboard' %}";
+        }, 1000); // redirect 1 sec after print
+    });
+
+    // Auto-print if printer is available
+    if (!printed) {
+        try {
+            window.print();
+            printed = true;
+            setTimeout(() => {
+                window.location.href = "{% url 'cashier_dashboard' %}";
+            }, 1000);
+        } catch (e) {
+            // Fallback: just wait for user to click print or timeout
+            console.warn("Auto-print failed:", e);
+        }
+    }
+});
+</script>
+
+
 {% endblock %}

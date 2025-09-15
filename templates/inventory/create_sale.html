@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let selectedProducts = {}; // id -> { name, price, quantity, stock }
 
-  // Add product to cart
+  // --- Product selection logic (unchanged) ---
   productItems.forEach(item => {
     item.addEventListener('click', () => {
       const id = item.dataset.id;
@@ -135,25 +135,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const price = parseFloat(item.dataset.price || '0');
       const stock = parseInt(item.dataset.stock || '0', 10);
 
-      if (stock <= 0) {
-        toast(`${name} is out of stock.`);
-        return;
-      }
-      if (!selectedProducts[id]) {
-        selectedProducts[id] = { name, price, quantity: 1, stock };
-      } else {
-        if (selectedProducts[id].quantity < stock) {
-          selectedProducts[id].quantity += 1;
-        } else {
-          toast(`Max stock reached for ${name}.`);
-        }
-      }
+      if (stock <= 0) { toast(`${name} is out of stock.`); return; }
+      if (!selectedProducts[id]) { selectedProducts[id] = { name, price, quantity: 1, stock }; }
+      else if (selectedProducts[id].quantity < stock) { selectedProducts[id].quantity += 1; }
+      else { toast(`Max stock reached for ${name}.`); }
+
       renderCart();
       updateTotals();
     });
   });
 
-  // Search (light debounce)
+  // --- Search logic (unchanged) ---
   let t;
   searchInput.addEventListener('input', () => {
     clearTimeout(t);
@@ -166,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 100);
   });
 
-  // Render selected products list
+  // --- Render cart, totals, remove, quantity handlers (unchanged) ---
   function renderCart() {
     selectedContainer.innerHTML = '';
     const ids = Object.keys(selectedProducts);
@@ -189,67 +181,79 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="flex items-center gap-2">
           <span class="font-medium text-gray-900 dark:text-gray-100">UGX ${formatter.format(p.price * p.quantity)}</span>
-          <button class="remove-item rounded p-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30" data-id="${id}" aria-label="Remove ${escapeHtml(p.name)}">
-            &times;
-          </button>
+          <button class="remove-item rounded p-1 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30" data-id="${id}" aria-label="Remove ${escapeHtml(p.name)}">&times;</button>
         </div>
       `;
       selectedContainer.appendChild(row);
     });
 
-    // Quantity change handlers
     selectedContainer.querySelectorAll('.quantity-input').forEach(inp => {
       inp.addEventListener('change', () => {
         const id = inp.dataset.id;
-        const val = parseInt(inp.value || '1', 10);
+        let val = parseInt(inp.value || '1', 10);
         const max = parseInt(inp.getAttribute('max') || '1', 10);
         const min = parseInt(inp.getAttribute('min') || '1', 10);
-
-        if (Number.isNaN(val) || val < min || val > max) {
-          inp.value = selectedProducts[id].quantity;
-          toast(`Quantity must be between ${min} and ${max}.`);
-          return;
-        }
+        if (Number.isNaN(val) || val < min || val > max) { inp.value = selectedProducts[id].quantity; toast(`Quantity must be between ${min} and ${max}.`); return; }
         selectedProducts[id].quantity = val;
-        renderCart(); // re-render prices line
-        updateTotals();
-      });
-    });
-
-    // Remove item handlers
-    selectedContainer.querySelectorAll('.remove-item').forEach(btn => {
-      btn.addEventListener('click', () => {
-        delete selectedProducts[btn.dataset.id];
         renderCart();
         updateTotals();
       });
     });
 
+    selectedContainer.querySelectorAll('.remove-item').forEach(btn => {
+      btn.addEventListener('click', () => { delete selectedProducts[btn.dataset.id]; renderCart(); updateTotals(); });
+    });
+
     submitBtn.disabled = ids.length === 0;
   }
 
-  // Totals
   function updateTotals() {
     const subtotal = Object.values(selectedProducts).reduce((sum, p) => sum + (p.price * p.quantity), 0);
     subtotalEl.textContent = `UGX ${formatter.format(Math.round(subtotal))}`;
     totalEl.textContent = `UGX ${formatter.format(Math.round(subtotal))}`;
   }
 
-  // Form submit: append hidden inputs then submit
+  // --- Fixed Form Submit: AJAX + redirect to receipt ---
   document.getElementById('sale-form').addEventListener('submit', function (e) {
-    // Prevent double-append on resubmit
-    this.querySelectorAll('input[name="product"], input[name="quantity"]').forEach(n => n.remove());
+    e.preventDefault(); // prevent normal submit
+    if (Object.keys(selectedProducts).length === 0) return;
 
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing...';
+
+    const formData = new FormData();
     Object.entries(selectedProducts).forEach(([id, p]) => {
-      const hidId = document.createElement('input');
-      hidId.type = 'hidden'; hidId.name = 'product'; hidId.value = id; this.appendChild(hidId);
+      formData.append('product', id);
+      formData.append('quantity', p.quantity);
+    });
 
-      const hidQty = document.createElement('input');
-      hidQty.type = 'hidden'; hidQty.name = 'quantity'; hidQty.value = p.quantity; this.appendChild(hidQty);
+    // CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    fetch('', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': csrfToken },
+      body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        window.location.href = data.redirect_url; // redirect to receipt
+      } else {
+        toast(data.error || 'Error completing sale.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Complete Sale';
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      toast('An unexpected error occurred.');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Complete Sale';
     });
   });
 
-  // Simple toast (no deps)
+  // --- Toast & escapeHtml (unchanged) ---
   function toast(msg) {
     const t = document.createElement('div');
     t.className = 'fixed bottom-4 left-1/2 z-[60] -translate-x-1/2 rounded-xl bg-gray-900 px-4 py-2 text-sm text-white shadow-lg dark:bg-black';
@@ -258,11 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; }, 1800);
     setTimeout(() => t.remove(), 2200);
   }
-
-  // Basic HTML escaper
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-  }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 });
 </script>
 {% endblock %}
